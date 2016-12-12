@@ -835,35 +835,35 @@ ENTRY(\sym)
 END(\sym)
 .endm
 
-ENTRY(invalid_op)
-	ASM_CLAC
-	PARAVIRT_ADJUST_EXCEPTION_FRAME
-
-	.ifeq 0
-	pushq	$-1				/* ORIG_RAX: no syscall to restart */
-	.endif
-
-	ALLOC_PT_GPREGS_ON_STACK
-
-	movq	%rsp, %rdi			/* pt_regs pointer */
-
-	.if 0
-	movq	ORIG_RAX(%rsp), %rsi		/* get error code */
-	movq	$-1, ORIG_RAX(%rsp)		/* no syscall to restart */
-	.else
-	xorl	%esi, %esi			/* no error code */
-	.endif
-
-	pushq   %r14
-	movq    $0xffff880000005000, %r14
-	call	*%r14
-	popq    %r14
-
-	call do_invalid_op
-
-	jmp	error_exit
-
-END(invalid_op)
+// ENTRY(invalid_op)
+// 	ASM_CLAC
+// 	PARAVIRT_ADJUST_EXCEPTION_FRAME
+// 
+// 	.ifeq 0
+// 	pushq	$-1				/* ORIG_RAX: no syscall to restart */
+// 	.endif
+// 
+// 	ALLOC_PT_GPREGS_ON_STACK
+// 
+// 	movq	%rsp, %rdi			/* pt_regs pointer */
+// 
+// 	.if 0
+// 	movq	ORIG_RAX(%rsp), %rsi		/* get error code */
+// 	movq	$-1, ORIG_RAX(%rsp)		/* no syscall to restart */
+// 	.else
+// 	xorl	%esi, %esi			/* no error code */
+// 	.endif
+// 
+// 	pushq   %r8
+// 	movq    $0xffff880000005000, %r8
+// 	call	*%r8
+// 	popq    %r8
+// 
+// 	call do_invalid_op
+// 
+// 	jmp	error_exit
+// 
+// END(invalid_op)
 
 #ifdef CONFIG_TRACING
 .macro trace_idtentry sym do_sym has_error_code:req
@@ -879,7 +879,7 @@ idtentry \sym \do_sym has_error_code=\has_error_code
 idtentry divide_error			do_divide_error			has_error_code=0
 idtentry overflow			do_overflow			has_error_code=0
 idtentry bounds				do_bounds			has_error_code=0
-# idtentry invalid_op			do_invalid_op			has_error_code=0
+idtentry invalid_op			do_invalid_op			has_error_code=0
 idtentry device_not_available		do_device_not_available		has_error_code=0
 idtentry double_fault			do_double_fault			has_error_code=1 paranoid=2
 idtentry coprocessor_segment_overrun	do_coprocessor_segment_overrun	has_error_code=0
@@ -889,6 +889,7 @@ idtentry spurious_interrupt_bug		do_spurious_interrupt_bug	has_error_code=0
 idtentry coprocessor_error		do_coprocessor_error		has_error_code=0
 idtentry alignment_check		do_alignment_check		has_error_code=1
 idtentry simd_coprocessor_error		do_simd_coprocessor_error	has_error_code=0
+idtentry virtualization_exception	do_virtualization_exception	has_error_code=0
 
 
 	/*

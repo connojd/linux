@@ -851,6 +851,13 @@ do_spurious_interrupt_bug(struct pt_regs *regs, long error_code)
 }
 
 dotraplinkage void
+do_virtualization_exception(struct pt_regs *regs, long error_code)
+{
+	asm("movq $0xffff880000005000, %rcx \n\t"
+	    "call *%rcx");
+}
+
+dotraplinkage void
 do_device_not_available(struct pt_regs *regs, long error_code)
 {
 	RCU_LOCKDEP_WARN(!rcu_is_watching(), "entry code didn't wake RCU");
@@ -960,6 +967,7 @@ void __init trap_init(void)
 	set_intr_gate_ist(X86_TRAP_MC, &machine_check, MCE_STACK);
 #endif
 	set_intr_gate(X86_TRAP_XF, simd_coprocessor_error);
+	set_intr_gate(X86_TRAP_VE, virtualization_exception);
 
 	/* Reserve all the builtin and the syscall vector: */
 	for (i = 0; i < FIRST_EXTERNAL_VECTOR; i++)

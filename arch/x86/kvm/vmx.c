@@ -930,6 +930,7 @@ static unsigned long *vmx_msr_bitmap_legacy_x2apic_apicv_inactive;
 static unsigned long *vmx_msr_bitmap_longmode_x2apic_apicv_inactive;
 static unsigned long *vmx_vmread_bitmap;
 static unsigned long *vmx_vmwrite_bitmap;
+static unsigned long *vmx_ve_info;
 
 static bool cpu_has_load_ia32_efer;
 static bool cpu_has_load_perf_global_ctrl;
@@ -3970,7 +3971,6 @@ static u64 construct_eptp(unsigned long root_hpa)
 	return eptp;
 }
 
-
 /*
  * EPT translation helpers
  */
@@ -4093,7 +4093,7 @@ static void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3)
 		else
 			guest_cr3 = vcpu->kvm->arch.ept_identity_map_addr;
 
-		read_ept_entries(entry, eptp, 0x0000000000002000ULL);
+		read_ept_entries(entry, eptp, 0x2000ULL);
 		ept_load_pdptrs(vcpu);
 	}
 
@@ -5145,6 +5145,11 @@ static int vmx_vcpu_setup(struct vcpu_vmx *vmx)
 	}
 	if (cpu_has_vmx_msr_bitmap())
 		vmcs_write64(MSR_BITMAP, __pa(vmx_msr_bitmap_legacy));
+
+	if (cpu_has_vmx_ept_violation_ve() && vmx_ve_info) {
+		vmcs_write64(VE_INFO_ADDR, __pa(vmx_ve_info));
+		printk(KERN_INFO "EPT: #VE info address written to vmcs");
+	}
 
 	vmcs_write64(VMCS_LINK_POINTER, -1ull); /* 22.3.1.5 */
 
@@ -6576,8 +6581,18 @@ static __init int hardware_setup(void)
 
 	if (!cpu_has_vmx_ept_violation_ve())
 		printk(KERN_ERR "EPT: Hardware doesn't support #VE");
-	else
-		printk(KERN_INFO "EPT: Hardware supports #VE");
+	else {
+		printk(KERN_INFO "EPT: Hardware supports #VE...allocating info area");
+
+		vmx_ve_info = (unsigned long *)__get_free_page(GFP_KERNEL);
+		if (!vmx_ve_info) {
+			printk(KERN_ERR "EPT: Failed to allocate #VE info area");
+			r = -ENOMEM;
+			goto out9;
+		}
+		memset(vmx_ve_info, 0x00, PAGE_SIZE);
+		printk(KERN_INFO "EPT: Allocated #VE info area");
+	}
 
 	/*
 	 * set_apic_access_page_addr() is used to reload apic access
@@ -6730,6 +6745,7 @@ static __exit void hardware_unsetup(void)
 	free_page((unsigned long)vmx_io_bitmap_a);
 	free_page((unsigned long)vmx_vmwrite_bitmap);
 	free_page((unsigned long)vmx_vmread_bitmap);
+	free_page((unsigned long)vmx_ve_info);
 
 	free_kvm_area();
 }

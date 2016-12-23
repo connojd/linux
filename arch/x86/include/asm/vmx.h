@@ -166,6 +166,8 @@ enum vmcs_field {
 	EOI_EXIT_BITMAP3_HIGH           = 0x00002023,
 	VMREAD_BITMAP                   = 0x00002026,
 	VMWRITE_BITMAP                  = 0x00002028,
+	VE_INFO_ADDR                    = 0x0000202A,
+	VE_INFO_ADDR_HIGH               = 0x0000202B,
 	XSS_EXIT_BITMAP                 = 0x0000202C,
 	XSS_EXIT_BITMAP_HIGH            = 0x0000202D,
 	TSC_MULTIPLIER                  = 0x00002032,

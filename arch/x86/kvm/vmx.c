@@ -3970,10 +3970,119 @@ static u64 construct_eptp(unsigned long root_hpa)
 	return eptp;
 }
 
+
+/*
+ * EPT translation helpers
+ */
+#define EPTE_ADDR_MASK  0x0007fffffffff000ULL
+#define EPTE_MAPS_PAGE  0x80ULL 
+
+/* PML4E */
+#define EPT_PML4E_MASK  0x0000ff8000000000ULL /* 47:39 of gpa */
+#define EPT_PML4E_SHIFT 36 /* 11:3 of address of PML4E */
+
+/* PDPTE */
+#define EPT_PDPTE_MASK  0x0000007fc0000000ULL /* 38:30 of gpa */
+#define EPT_PDPTE_SHIFT 27 /* 11:3 of address of PDPTE */
+
+/* PDE */
+#define EPT_PDE_MASK    0x000000003fe00000ULL /* 29:21 of gpa */
+#define EPT_PDE_SHIFT   18 /* 11:3 of address of PDE */
+
+/* PTE */
+#define EPT_PTE_MASK    0x00000000001ff000ULL /* 20:12 of gpa */
+#define EPT_PTE_SHIFT   9 /* 11:3 of address of PTE */
+
+enum epte_type { EPT_NONE, EPT_PML4E, EPT_PDPTE, EPT_PDE, EPT_PTE };
+struct epte {
+	enum epte_type type;
+	u64 parent;
+	u64 mask;
+	u64 shift;
+	u64 data;
+};
+
+static u64 epte_maps_page(struct epte entry)
+{
+	return (entry.data & EPTE_MAPS_PAGE) != 0ULL;
+}
+
+/*
+ * @phys_addr: the guest-physical address for which the function reads
+ *             ept entries encountered in its translation
+ * @eptp: the root of the ept paging structures
+ */
+
+static void read_epte(struct epte *entry, const u64 gpa)
+{
+	u64 child, offset;
+
+	child = entry->parent & EPTE_ADDR_MASK;
+	offset = (gpa & entry->mask) >> entry->shift;
+	entry->data = *((u64 *)__va((child | offset)));
+}
+
+static void init_epte(struct epte *entry, 
+		      const u64 parent, const enum epte_type type)
+{
+	entry->parent = parent;
+	entry->type = type;
+
+	switch (type) {
+	case EPT_PML4E:
+		entry->mask = EPT_PML4E_MASK;
+		entry->shift = EPT_PML4E_SHIFT;
+		return;
+	case EPT_PDPTE:
+		entry->mask = EPT_PDPTE_MASK;
+		entry->shift = EPT_PDPTE_SHIFT;
+		return;
+	case EPT_PDE:
+		entry->mask = EPT_PDE_MASK;
+		entry->shift = EPT_PDE_SHIFT;
+		return;
+	case EPT_PTE:
+		entry->mask = EPT_PTE_MASK;
+		entry->shift = EPT_PTE_SHIFT;
+		return;
+	default:
+		printk(KERN_ERR "EPT: invalid epte type");
+	}
+}
+
+static void read_ept_entries(struct epte *entry, const u64 eptp, const u64 gpa)
+{
+	init_epte(&entry[0], eptp, EPT_PML4E);
+	read_epte(&entry[0], gpa);
+
+	init_epte(&entry[1], entry[0].data, EPT_PDPTE);
+	read_epte(&entry[1], gpa);
+
+	if (epte_maps_page(entry[1])) {
+		entry[2].type = EPT_NONE;
+		printk(KERN_INFO "EPT: gpa %p resides in a 1GB page", (void *)gpa);
+		return;
+	}
+
+	init_epte(&entry[2], entry[1].data, EPT_PDE);
+	read_epte(&entry[2], gpa);
+
+	if (epte_maps_page(entry[2])) {
+		entry[3].type = EPT_NONE;
+		printk(KERN_INFO "EPT: gpa %p resides in a 2MB page", (void *)gpa);
+		return;
+	}
+
+	init_epte(&entry[3], entry[2].data, EPT_PTE);
+	read_epte(&entry[3], gpa);
+	printk(KERN_INFO "EPT: gpa %p resides in a 4KB page", (void *)gpa);
+}
+
 static void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3)
 {
 	unsigned long guest_cr3;
 	u64 eptp;
+	struct epte entry[4];
 
 	guest_cr3 = cr3;
 	if (enable_ept) {
@@ -3983,6 +4092,8 @@ static void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3)
 			guest_cr3 = kvm_read_cr3(vcpu);
 		else
 			guest_cr3 = vcpu->kvm->arch.ept_identity_map_addr;
+
+		read_ept_entries(entry, eptp, 0x0000000000002000ULL);
 		ept_load_pdptrs(vcpu);
 	}
 

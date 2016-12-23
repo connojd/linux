@@ -1083,6 +1083,12 @@ static inline bool cpu_has_vmx_virtual_intr_delivery(void)
 		SECONDARY_EXEC_VIRTUAL_INTR_DELIVERY;
 }
 
+static inline bool cpu_has_vmx_ept_violation_ve(void)
+{
+	return vmcs_config.cpu_based_2nd_exec_ctrl &
+		SECONDARY_EXEC_EPT_VIOLATION_VE;
+}
+
 /*
  * Comment's format: document - errata name - stepping - processor name.
  * Refer from
@@ -1823,8 +1829,10 @@ static void update_exception_bitmap(struct kvm_vcpu *vcpu)
 		eb |= 1u << BP_VECTOR;
 	if (to_vmx(vcpu)->rmode.vm86_active)
 		eb = ~0;
-	if (enable_ept)
+	if (enable_ept) {
 		eb &= ~(1u << PF_VECTOR); /* bypass_guest_pf = 0 */
+		eb &= ~(1u << VE_VECTOR); /* deliver #VE */
+	}
 	if (vcpu->fpu_active)
 		eb &= ~(1u << NM_VECTOR);
 
@@ -3368,12 +3376,19 @@ static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf)
 			SECONDARY_EXEC_SHADOW_VMCS |
 			SECONDARY_EXEC_XSAVES |
 			SECONDARY_EXEC_ENABLE_PML |
+			SECONDARY_EXEC_EPT_VIOLATION_VE |
 			SECONDARY_EXEC_TSC_SCALING;
 		if (adjust_vmx_controls(min2, opt2,
 					MSR_IA32_VMX_PROCBASED_CTLS2,
 					&_cpu_based_2nd_exec_control) < 0)
 			return -EIO;
 	}
+
+	if (_cpu_based_2nd_exec_control & SECONDARY_EXEC_EPT_VIOLATION_VE)
+		printk(KERN_INFO "EPT: #VEs are enabled");
+	else
+		printk(KERN_INFO "EPT: #VEs are disabled");
+
 #ifndef CONFIG_X86_64
 	if (!(_cpu_based_2nd_exec_control &
 				SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES))
@@ -3387,6 +3402,7 @@ static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf)
 				SECONDARY_EXEC_VIRTUAL_INTR_DELIVERY);
 
 	if (_cpu_based_2nd_exec_control & SECONDARY_EXEC_ENABLE_EPT) {
+		printk(KERN_INFO "kvm: EPT is enabled");
 		/* CR3 accesses and invlpg don't need to cause VM Exits when EPT
 		   enabled */
 		_cpu_based_exec_control &= ~(CPU_BASED_CR3_LOAD_EXITING |
@@ -4963,6 +4979,7 @@ static u32 vmx_secondary_exec_control(struct vcpu_vmx *vmx)
 		enable_unrestricted_guest = 0;
 		/* Enable INVPCID for non-ept guests may cause performance regression. */
 		exec_control &= ~SECONDARY_EXEC_ENABLE_INVPCID;
+		exec_control &= ~SECONDARY_EXEC_EPT_VIOLATION_VE;
 	}
 	if (!enable_unrestricted_guest)
 		exec_control &= ~SECONDARY_EXEC_UNRESTRICTED_GUEST;
@@ -6130,6 +6147,7 @@ static int handle_ept_violation(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
+	//printk(KERN_ERR "EPT: Handling EPT violation!\n");
 	/*
 	 * EPT violation happened while executing iret from NMI,
 	 * "blocked by NMI" bit has to be set before next VM entry.
@@ -6162,6 +6180,8 @@ static int handle_ept_misconfig(struct kvm_vcpu *vcpu)
 {
 	int ret;
 	gpa_t gpa;
+
+	//printk(KERN_ERR "EPT: Handling EPT misconfiguration!\n");
 
 	gpa = vmcs_read64(GUEST_PHYSICAL_ADDRESS);
 	if (!kvm_io_bus_write(vcpu, KVM_FAST_MMIO_BUS, gpa, 0, NULL)) {
@@ -6431,6 +6451,7 @@ static __init int hardware_setup(void)
 		enable_ept = 0;
 		enable_unrestricted_guest = 0;
 		enable_ept_ad_bits = 0;
+		printk(KERN_ERR "EPT: Hardware doesn't support 4-level paging");
 	}
 
 	if (!cpu_has_vmx_ept_ad_bits())
@@ -6441,6 +6462,11 @@ static __init int hardware_setup(void)
 
 	if (!cpu_has_vmx_flexpriority())
 		flexpriority_enabled = 0;
+
+	if (!cpu_has_vmx_ept_violation_ve())
+		printk(KERN_ERR "EPT: Hardware doesn't support #VE");
+	else
+		printk(KERN_INFO "EPT: Hardware supports #VE");
 
 	/*
 	 * set_apic_access_page_addr() is used to reload apic access
@@ -6453,8 +6479,10 @@ static __init int hardware_setup(void)
 	if (!cpu_has_vmx_tpr_shadow())
 		kvm_x86_ops->update_cr8_intercept = NULL;
 
-	if (enable_ept && !cpu_has_vmx_ept_2m_page())
+	if (enable_ept && !cpu_has_vmx_ept_2m_page()) {
+		printk(KERN_ERR "EPT: Hardware doesn't support 2MB pages under EPT");
 		kvm_disable_largepages();
+	}
 
 	if (!cpu_has_vmx_ple())
 		ple_gap = 0;

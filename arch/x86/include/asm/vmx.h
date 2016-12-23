@@ -71,6 +71,7 @@
 #define SECONDARY_EXEC_ENABLE_INVPCID		0x00001000
 #define SECONDARY_EXEC_SHADOW_VMCS              0x00004000
 #define SECONDARY_EXEC_ENABLE_PML               0x00020000
+#define SECONDARY_EXEC_EPT_VIOLATION_VE         0x00040000
 #define SECONDARY_EXEC_XSAVES			0x00100000
 #define SECONDARY_EXEC_TSC_SCALING              0x02000000
 
@@ -414,7 +415,7 @@ enum vmcs_field {
 #define VMX_EPT_2MB_PAGE_BIT			(1ull << 16)
 #define VMX_EPT_1GB_PAGE_BIT			(1ull << 17)
 #define VMX_EPT_INVEPT_BIT			(1ull << 20)
-#define VMX_EPT_AD_BIT				    (1ull << 21)
+#define VMX_EPT_AD_BIT	  		        (1ull << 21)
 #define VMX_EPT_EXTENT_CONTEXT_BIT		(1ull << 25)
 #define VMX_EPT_EXTENT_GLOBAL_BIT		(1ull << 26)
 
@@ -432,8 +433,9 @@ enum vmcs_field {
 #define VMX_EPT_WRITABLE_MASK			0x2ull
 #define VMX_EPT_EXECUTABLE_MASK			0x4ull
 #define VMX_EPT_IPAT_BIT    			(1ull << 6)
-#define VMX_EPT_ACCESS_BIT				(1ull << 8)
-#define VMX_EPT_DIRTY_BIT				(1ull << 9)
+#define VMX_EPT_ACCESS_BIT			(1ull << 8)
+#define VMX_EPT_DIRTY_BIT			(1ull << 9)
+#define VMX_EPT_SUPPRESS_VE			(1ull << 63)
 
 #define VMX_EPT_IDENTITY_PAGETABLE_ADDR		0xfffbc000ul
 

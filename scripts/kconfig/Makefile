@@ -124,6 +124,9 @@ PHONY += xenconfig
 xenconfig: xen.config
 	@:
 
+PHONY += igdmconfig
+igdmconfig: igdm.config
+
 PHONY += tinyconfig
 tinyconfig:
 	$(Q)$(MAKE) -f $(srctree)/Makefile allnoconfig tiny.config
@@ -152,6 +155,7 @@ help:
 	@echo  '                    default value'
 	@echo  '  kvmconfig	  - Enable additional options for kvm guest kernel support'
 	@echo  '  xenconfig       - Enable additional options for xen dom0 and guest kernel support'
+	@echo  '  igdmconfig      - Configure a suitable host and guest for IGDM testing'
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
 
 # lxdialog stuff

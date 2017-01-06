@@ -2543,9 +2543,10 @@ static int set_spte(struct kvm_vcpu *vcpu, u64 *sptep,
 
 	if (level > PT_PAGE_TABLE_LEVEL)
 		spte |= PT_PAGE_SIZE_MASK;
-	if (tdp_enabled)
+	if (tdp_enabled) {
 		spte |= kvm_x86_ops->get_mt_mask(vcpu, gfn,
 			kvm_is_mmio_pfn(pfn));
+	}
 
 	if (host_writable)
 		spte |= SPTE_HOST_WRITEABLE;

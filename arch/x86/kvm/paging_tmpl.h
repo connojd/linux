@@ -374,6 +374,7 @@ retry_walk:
 		pte_access = pt_access & FNAME(gpte_access)(vcpu, pte);
 
 		walker->ptes[walker->level - 1] = pte;
+
 	} while (!is_last_gpte(mmu, walker->level, pte));
 
 	pte_pkey = FNAME(gpte_pkeys)(vcpu, pte);

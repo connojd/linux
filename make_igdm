@@ -1,0 +1,6 @@
+#!/bin/bash
+
+make O=/home/devbot/builds/kernel -j4 && \
+sudo make O=/home/devbot/builds/kernel modules_install && \
+sudo cp /home/devbot/builds/kernel/arch/x86_64/boot/bzImage /boot/vmlinuz-4.9.0-rc7-igdm && \
+sudo mkinitcpio -p 4.9.0-rc7-igdm

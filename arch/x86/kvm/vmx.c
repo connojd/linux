@@ -93,7 +93,7 @@ module_param(fasteoi, bool, S_IRUGO);
 static bool __read_mostly enable_apicv = 1;
 module_param(enable_apicv, bool, S_IRUGO);
 
-static bool __read_mostly enable_shadow_vmcs = 1;
+static bool __read_mostly enable_shadow_vmcs = 0;
 module_param_named(enable_shadow_vmcs, enable_shadow_vmcs, bool, S_IRUGO);
 /*
  * If nested=1, nested virtualization is supported, i.e., guests may use
@@ -3974,10 +3974,11 @@ static u64 construct_eptp(unsigned long root_hpa)
 /*
  * EPT translation helpers
  */
-#define EPTE_ADDR_MASK  0x0007fffffffff000ULL
+#define EPTE_ADDR_MASK  0x0000fffffffff000ULL
 #define EPTE_MAPS_PAGE  0x80ULL 
 
 /* PML4E */
+#define PML4_ADDR_MASK  0x000ffffffffff000ULL
 #define EPT_PML4E_MASK  0x0000ff8000000000ULL /* 47:39 of gpa */
 #define EPT_PML4E_SHIFT 36 /* 11:3 of address of PML4E */
 
@@ -3993,12 +3994,23 @@ static u64 construct_eptp(unsigned long root_hpa)
 #define EPT_PTE_MASK    0x00000000001ff000ULL /* 20:12 of gpa */
 #define EPT_PTE_SHIFT   9 /* 11:3 of address of PTE */
 
-enum epte_type { EPT_NONE, EPT_PML4E, EPT_PDPTE, EPT_PDE, EPT_PTE };
+#define EPT_NR_ENTRIES 512
+#define EPT_ENTRY_SIZE 8
+
+enum epte_type {
+	EPT_NONE = 0,
+	EPT_PTE = 1,
+	EPT_PDE = 2,
+	EPT_PDPTE = 3,
+	EPT_PML4E = 4
+};
+
 struct epte {
 	enum epte_type type;
 	u64 parent;
 	u64 mask;
 	u64 shift;
+	u64 hpa;
 	u64 data;
 };
 
@@ -4007,19 +4019,14 @@ static u64 epte_maps_page(struct epte entry)
 	return (entry.data & EPTE_MAPS_PAGE) != 0ULL;
 }
 
-/*
- * @phys_addr: the guest-physical address for which the function reads
- *             ept entries encountered in its translation
- * @eptp: the root of the ept paging structures
- */
-
 static void read_epte(struct epte *entry, const u64 gpa)
 {
 	u64 child, offset;
 
 	child = entry->parent & EPTE_ADDR_MASK;
 	offset = (gpa & entry->mask) >> entry->shift;
-	entry->data = *((u64 *)__va((child | offset)));
+	entry->hpa = child | offset;
+	entry->data = *((u64 *)__va(child | offset));
 }
 
 static void init_epte(struct epte *entry, 
@@ -4050,8 +4057,20 @@ static void init_epte(struct epte *entry,
 	}
 }
 
-static void read_ept_entries(struct epte *entry, const u64 eptp, const u64 gpa)
+static void write_suppress_ve_bit(u64 *epte, bool suppress)
 {
+	if (suppress)
+		*epte |= VMX_EPT_SUPPRESS_VE;
+	else
+		*epte &= ~VMX_EPT_SUPPRESS_VE;
+}
+
+static void walk_ept_entry(struct epte *entry, const u64 eptp,
+	u64 gpa, bool suppress_ve)
+{
+	entry[2].type = EPT_NONE;
+	entry[3].type = EPT_NONE;
+
 	init_epte(&entry[0], eptp, EPT_PML4E);
 	read_epte(&entry[0], gpa);
 
@@ -4059,8 +4078,9 @@ static void read_ept_entries(struct epte *entry, const u64 eptp, const u64 gpa)
 	read_epte(&entry[1], gpa);
 
 	if (epte_maps_page(entry[1])) {
-		entry[2].type = EPT_NONE;
-		printk(KERN_INFO "EPT: gpa %p resides in a 1GB page", (void *)gpa);
+		printk(KERN_INFO "EPT: gpa %p resides in a 1GB page",
+			(void *)gpa);
+		write_suppress_ve_bit((u64 *)__va(entry[1].hpa), suppress_ve);
 		return;
 	}
 
@@ -4068,32 +4088,71 @@ static void read_ept_entries(struct epte *entry, const u64 eptp, const u64 gpa)
 	read_epte(&entry[2], gpa);
 
 	if (epte_maps_page(entry[2])) {
-		entry[3].type = EPT_NONE;
-		printk(KERN_INFO "EPT: gpa %p resides in a 2MB page", (void *)gpa);
+		printk(KERN_INFO "EPT: gpa %p resides in a 2MB page",
+			(void *)gpa);
+		write_suppress_ve_bit((u64 *)__va(entry[2].hpa), suppress_ve);
 		return;
 	}
 
 	init_epte(&entry[3], entry[2].data, EPT_PTE);
 	read_epte(&entry[3], gpa);
-	printk(KERN_INFO "EPT: gpa %p resides in a 4KB page", (void *)gpa);
+	printk(KERN_INFO "EPT: gpa %p resides in a 4KB page",
+		(void *)gpa);
+	write_suppress_ve_bit((u64 *)__va(entry[3].hpa), suppress_ve);
+
+	return;
+}
+
+static void suppress_ves(u64 *base, enum epte_type type)
+{
+	u64 i;
+	
+	for (i = 0; i < EPT_NR_ENTRIES; i++) {
+		if ((base[i] & 0x7) == 0) {
+			base[i] |= VMX_EPT_SUPPRESS_VE;
+			continue;
+		}
+		
+		if (type == EPT_PTE) {
+			base[i] |= VMX_EPT_SUPPRESS_VE;
+			continue;
+		}
+
+		if (type == EPT_PML4E) {
+			suppress_ves(__va((base[i] & EPTE_ADDR_MASK) >> 12), type - 1);
+			continue;
+		}
+
+		if (base[i] & 0x80) { 
+			base[i] |= VMX_EPT_SUPPRESS_VE;
+			continue;
+		}
+
+		suppress_ves(__va((base[i] & EPTE_ADDR_MASK) >> 12), type - 1);
+	}
+} 
+
+static void allow_next_ve(unsigned int *write_flag)
+{
+	*write_flag = 0UL;
 }
 
 static void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3)
 {
 	unsigned long guest_cr3;
 	u64 eptp;
-	struct epte entry[4];
 
 	guest_cr3 = cr3;
 	if (enable_ept) {
 		eptp = construct_eptp(cr3);
 		vmcs_write64(EPT_POINTER, eptp);
+		//suppress_ves(__va((eptp & PML4_ADDR_MASK) >> 12), EPT_PML4E);
+
 		if (is_paging(vcpu) || is_guest_mode(vcpu))
 			guest_cr3 = kvm_read_cr3(vcpu);
 		else
 			guest_cr3 = vcpu->kvm->arch.ept_identity_map_addr;
 
-		read_ept_entries(entry, eptp, 0x2000ULL);
 		ept_load_pdptrs(vcpu);
 	}
 
@@ -6241,15 +6300,58 @@ static int handle_task_switch(struct kvm_vcpu *vcpu)
 	return 1;
 }
 
+static inline void print_ve_info(unsigned char *ve_info)
+{
+	printk(KERN_ERR "EPT: #VE information...");
+	printk(KERN_ERR " er: 0x%lx\n",
+		*(unsigned int *)ve_info);
+	printk(KERN_ERR " flag: 0x%lx\n",
+		*(unsigned int *)(&ve_info[4]));
+	printk(KERN_ERR " eq: 0x%llx\n",
+		*(unsigned long long *)(&ve_info[8]));
+	printk(KERN_ERR " gla: 0x%llx\n",
+		*(unsigned long long *)(&ve_info[16]));
+	printk(KERN_ERR " gpa: 0x%llx\n",
+		*(unsigned long long *)(&ve_info[24]));
+	printk(KERN_ERR " eptp index: 0x%lx\n",
+		*(unsigned short *)(&ve_info[32]));
+}
+
+static inline void print_exit_qual(unsigned long exit_qual)
+{
+	printk(KERN_ERR "EPT: exit qual: 0x%llx\n", (unsigned long long)exit_qual);
+}
+
+static inline void print_gas(gpa_t gpa, unsigned long gla)
+{
+	printk(KERN_ERR "EPT: gpa: 0x%llx\n", (unsigned long long)gpa);
+	printk(KERN_ERR "EPT: gla: 0x%llx\n", (unsigned long long)gla);
+}
+
+static bool ept_ve_sanity_check = false;
+static bool want_ve = true;
 static int handle_ept_violation(struct kvm_vcpu *vcpu)
 {
 	unsigned long exit_qualification;
 	gpa_t gpa;
 	u32 error_code;
 	int gla_validity;
+	unsigned char *ve_info;
 
 	exit_qualification = vmcs_readl(EXIT_QUALIFICATION);
 
+	ve_info = NULL;
+	ve_info = __va(vmcs_read64(VE_INFO_ADDR));
+	if (!ve_info)
+		printk(KERN_ERR "EPT: #VE info addr is NULL\n");
+	else if (want_ve) {
+		print_exit_qual(exit_qualification);
+		print_gas(vmcs_read64(GUEST_PHYSICAL_ADDRESS),
+			  vmcs_readl(GUEST_LINEAR_ADDRESS));
+		print_ve_info(ve_info);
+		want_ve = false;
+	}
+		
 	gla_validity = (exit_qualification >> 7) & 0x3;
 	if (gla_validity == 0x2) {
 		printk(KERN_ERR "EPT: Handling EPT violation failed!\n");
@@ -6263,7 +6365,6 @@ static int handle_ept_violation(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
-	//printk(KERN_ERR "EPT: Handling EPT violation!\n");
 	/*
 	 * EPT violation happened while executing iret from NMI,
 	 * "blocked by NMI" bit has to be set before next VM entry.
@@ -6276,6 +6377,15 @@ static int handle_ept_violation(struct kvm_vcpu *vcpu)
 		vmcs_set_bits(GUEST_INTERRUPTIBILITY_INFO, GUEST_INTR_STATE_NMI);
 
 	gpa = vmcs_read64(GUEST_PHYSICAL_ADDRESS);
+
+	//if (ept_ve_sanity_check && ve_info) {
+	//	if (gpa != *(long unsigned int *)&ve_info[24])
+	//		printk(KERN_ERR "EPT: #VE info gpa != hanle_ept_violation gpa"); 
+	//	else
+	//		printk(KERN_INFO "EPT: #VE info gpa == hanle_ept_violation gpa"); 
+	//	ept_ve_sanity_check = false;
+	//}
+
 	trace_kvm_page_fault(gpa, exit_qualification);
 
 	/* it is a read fault? */
@@ -6296,8 +6406,6 @@ static int handle_ept_misconfig(struct kvm_vcpu *vcpu)
 {
 	int ret;
 	gpa_t gpa;
-
-	//printk(KERN_ERR "EPT: Handling EPT misconfiguration!\n");
 
 	gpa = vmcs_read64(GUEST_PHYSICAL_ADDRESS);
 	if (!kvm_io_bus_write(vcpu, KVM_FAST_MMIO_BUS, gpa, 0, NULL)) {
@@ -8990,6 +9098,15 @@ void vmx_arm_hv_timer(struct kvm_vcpu *vcpu)
 
 static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 {
+	unsigned long idt_v;
+	unsigned long idt_index;
+	unsigned long idt_type;
+
+	unsigned long intr_info;
+	unsigned long intr_v;
+        unsigned long intr_index;
+        unsigned long intr_type;
+
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	unsigned long debugctlmsr, cr4;
 
@@ -9170,6 +9287,23 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vcpu->arch.regs_dirty = 0;
 
 	vmx->idt_vectoring_info = vmcs_read32(IDT_VECTORING_INFO_FIELD);
+
+	idt_v = (vmx->idt_vectoring_info & VECTORING_INFO_VALID_MASK);
+	idt_index = (vmx->idt_vectoring_info & VECTORING_INFO_VECTOR_MASK);
+	idt_type = (vmx->idt_vectoring_info & VECTORING_INFO_TYPE_MASK);
+
+	if (idt_v && idt_index == 20U && idt_type == 0x300U)
+		printk(KERN_WARNING "EPT: violation caused indirect VM-exit\n");
+
+	intr_info = vmcs_read32(VM_EXIT_INTR_INFO);
+	intr_v = (intr_info & INTR_INFO_VALID_MASK);
+        intr_index = (intr_info & INTR_INFO_VECTOR_MASK);
+        intr_type = (intr_info & INTR_INFO_INTR_TYPE_MASK);
+
+	if (intr_v && intr_index == 20U && intr_type == 0x300U) {
+		printk(KERN_WARNING "EPT: violation caused direct VM-exit\n");
+		printk(KERN_WARNING "EPT: must clear exception_bitmap[20]");
+	}
 
 	vmx->loaded_vmcs->launched = 1;
 

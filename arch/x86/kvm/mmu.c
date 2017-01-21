@@ -62,10 +62,13 @@ enum {
 	AUDIT_POST_SYNC
 };
 
-#undef MMU_DEBUG
+//#undef MMU_DEBUG
+//
+//#ifdef MMU_DEBUG
 
-#ifdef MMU_DEBUG
-static bool dbg = 0;
+#ifndef MMU_DEBUG
+#define MMU_DEBUG
+static bool dbg = 1;
 module_param(dbg, bool, 0644);
 
 #define pgprintk(x...) do { if (dbg) printk(x); } while (0)
@@ -528,7 +531,7 @@ static void mmu_spte_set(u64 *sptep, u64 new_spte)
 /* Rules for using mmu_spte_update:
  * Update the state bits, it means the mapped pfn is not changed.
  *
- * Whenever we overwrite a writable spte with a read-only one we
+ * Whenever we overwrite a writable spe with a read-only one we
  * should flush remote TLBs. Otherwise rmap_write_protect
  * will find a read-only spte, even though the writable spte
  * might be cached on a CPU's TLB, the return value indicates this
@@ -2543,6 +2546,13 @@ static int set_spte(struct kvm_vcpu *vcpu, u64 *sptep,
 
 	if (level > PT_PAGE_TABLE_LEVEL)
 		spte |= PT_PAGE_SIZE_MASK;
+
+//	if (tdp_enabled) {
+//		spte |= kvm_x86_ops->get_mt_mask(vcpu, gfn,
+//			kvm_is_mmio_pfn(pfn));
+//		spte |= VMX_EPT_SUPPRESS_VE;
+//	}
+
 	if (tdp_enabled)
 		spte |= kvm_x86_ops->get_mt_mask(vcpu, gfn,
 			kvm_is_mmio_pfn(pfn));
@@ -2592,8 +2602,10 @@ static int set_spte(struct kvm_vcpu *vcpu, u64 *sptep,
 	}
 
 set_pte:
-	if (mmu_spte_update(sptep, spte))
+	if (mmu_spte_update(sptep, spte)) {
+		printk(KERN_INFO "EPT: spte being updated");
 		kvm_flush_remote_tlbs(vcpu->kvm);
+	}
 done:
 	return ret;
 }
@@ -3123,6 +3135,7 @@ static int mmu_alloc_direct_roots(struct kvm_vcpu *vcpu)
 	unsigned i;
 
 	if (vcpu->arch.mmu.shadow_root_level == PT64_ROOT_LEVEL) {
+		printk(KERN_INFO "EPT: root level == PT64_ROOT_LEVEL");
 		spin_lock(&vcpu->kvm->mmu_lock);
 		make_mmu_pages_available(vcpu);
 		sp = kvm_mmu_get_page(vcpu, 0, 0, PT64_ROOT_LEVEL, 1, ACC_ALL);
@@ -3130,6 +3143,7 @@ static int mmu_alloc_direct_roots(struct kvm_vcpu *vcpu)
 		spin_unlock(&vcpu->kvm->mmu_lock);
 		vcpu->arch.mmu.root_hpa = __pa(sp->spt);
 	} else if (vcpu->arch.mmu.shadow_root_level == PT32E_ROOT_LEVEL) {
+		printk(KERN_INFO "EPT: root level == PT32_ROOT_LEVEL");
 		for (i = 0; i < 4; ++i) {
 			hpa_t root = vcpu->arch.mmu.pae_root[i];
 

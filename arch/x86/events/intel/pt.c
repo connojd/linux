@@ -387,21 +387,30 @@ static u64 pt_config_cr3_match(struct perf_event *event)
         return rtit_ctl;
 }
 
-//static u64 pt_config_ip_filter(struct perf_event *event)
-//{
-//        u64 rtit_ctl = 0;
-//
-//        if (event->ip_filter_base == 0 || event->ip_filter_limit == 0) {
-//            pr_debug("Intel PT: IP filter base || limit == 0");
-//            return rtit_ctl;
-//        }
-//
-//        wrmsrl(MSR_IA32_RTIT_ADDR0_A, event->ip_filter_base);
-//        wrmsrl(MSR_IA32_RTIT_ADDR0_B, event->ip_filter_limit);
-//
-//        rtit_ctl = 1ull << RTIT_CTL_ADDR0_OFFSET;
-//        return rtit_ctl;
-//}
+static u64 pt_config_ip_filter(struct perf_event *event)
+{
+        u64 rtit_ctl = 0;
+        u64 base, limit = 0;
+
+        if (event->ip_filter_base == 0 || event->ip_filter_limit == 0) {
+            pr_debug("Intel PT: IP filter base || limit == 0");
+            return rtit_ctl;
+        }
+
+        wrmsrl(MSR_IA32_RTIT_ADDR0_A, event->ip_filter_base);
+        wrmsrl(MSR_IA32_RTIT_ADDR0_B, event->ip_filter_limit);
+        printk("Intel PT: ip_filter_base: 0x%llx", event->ip_filter_base);
+        printk("Intel PT: ip_filter_limit: 0x%llx", event->ip_filter_limit);
+
+        rdmsrl(MSR_IA32_RTIT_ADDR0_A, base);
+        rdmsrl(MSR_IA32_RTIT_ADDR0_B, limit);
+        printk("Intel PT: RTIT_ADDR0_A: 0x%llx", base);
+        printk("Intel PT: RTIT_ADDR0_B: 0x%llx", limit);
+
+
+        rtit_ctl = 1ull << RTIT_CTL_ADDR0_OFFSET;
+        return rtit_ctl;
+}
 
 static u64 pt_config_filters(struct perf_event *event)
 {
@@ -454,7 +463,7 @@ static void pt_config(struct perf_event *event)
 	}
 
         reg = pt_config_cr3_match(event);
-        //reg |= pt_config_ip_filter(event);
+        reg |= pt_config_ip_filter(event);
 	reg |= pt_config_filters(event);
 	reg |= RTIT_CTL_TOPA | RTIT_CTL_BRANCH_EN | RTIT_CTL_TRACEEN;
 

@@ -4691,23 +4691,22 @@ static int perf_event_cr3_filter(struct perf_event *event)
 
         event->cr3_match = virt_to_phys(mm->pgd);
         printk("Intel PT: CR3 to match: %llu", event->cr3_match);
-        printk("Intel PT: mm->pgd: %llu", mm->pgd);
         mmput(mm);
 
         return 0;
 }
 
-//static int perf_event_ip_filter_base(struct perf_event *event, unsigned long base)
-//{
-//        event->ip_filter_base = base;
-//        return 0;
-//}
-//
-//static int perf_event_ip_filter_limit(struct perf_event *event, unsigned long limit)
-//{
-//        event->ip_filter_limit = limit;
-//        return 0;
-//}
+static int perf_event_ip_filter_base(struct perf_event *event, unsigned long base)
+{
+        event->ip_filter_base = base;
+        return 0;
+}
+
+static int perf_event_ip_filter_limit(struct perf_event *event, unsigned long limit)
+{
+        event->ip_filter_limit = limit;
+        return 0;
+}
 
 static long _perf_ioctl(struct perf_event *event, unsigned int cmd, unsigned long arg)
 {
@@ -4766,13 +4765,13 @@ static long _perf_ioctl(struct perf_event *event, unsigned int cmd, unsigned lon
                 printk(KERN_INFO "running perf_ioctl cr3 filter");
                 return perf_event_cr3_filter(event);
 
-        //case PERF_EVENT_IOC_IP_FILTER_BASE:
-        //        printk(KERN_INFO "running perf_ioctl ip filter base");
-        //        return perf_event_ip_filter_base(event, arg);
+        case PERF_EVENT_IOC_IP_FILTER_BASE:
+                printk(KERN_INFO "running perf_ioctl ip filter base");
+                return perf_event_ip_filter_base(event, arg);
 
-        //case PERF_EVENT_IOC_IP_FILTER_LIMIT:
-        //        printk(KERN_INFO "running perf_ioctl ip filter limit");
-        //        return perf_event_ip_filter_limit(event, arg);
+        case PERF_EVENT_IOC_IP_FILTER_LIMIT:
+                printk(KERN_INFO "running perf_ioctl ip filter limit");
+                return perf_event_ip_filter_limit(event, arg);
 
 	case PERF_EVENT_IOC_SET_BPF:
 		return perf_event_set_bpf_prog(event, arg);

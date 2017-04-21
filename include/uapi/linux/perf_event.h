@@ -408,6 +408,8 @@ struct perf_event_attr {
 #define PERF_EVENT_IOC_SET_BPF		_IOW('$', 8, __u32)
 #define PERF_EVENT_IOC_PAUSE_OUTPUT	_IOW('$', 9, __u32)
 #define PERF_EVENT_IOC_CR3_FILTER	_IO ('$', 10)
+#define PERF_EVENT_IOC_IP_FILTER_BASE	_IOW('$', 11, __u64)
+#define PERF_EVENT_IOC_IP_FILTER_LIMIT	_IOW('$', 12, __u64)
 
 enum perf_event_ioc_flags {
 	PERF_IOC_FLAG_GROUP		= 1U << 0,

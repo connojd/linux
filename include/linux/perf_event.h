@@ -682,6 +682,9 @@ struct perf_event {
 	/* vma address array for file-based filders */
 	unsigned long			*addr_filters_offs;
 	unsigned long			addr_filters_gen;
+        u64                             cr3_match;
+//        u64                             ip_filter_base;
+//        u64                             ip_filter_limit;
 
 	void (*destroy)(struct perf_event *);
 	struct rcu_head			rcu_head;

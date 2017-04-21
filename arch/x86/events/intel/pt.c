@@ -368,6 +368,41 @@ static const struct pt_address_range {
 	}
 };
 
+static u64 pt_config_cr3_match(struct perf_event *event)
+{
+        u64 rtit_ctl = 0;
+        u64 match = 0;
+
+        if (event->cr3_match == 0) {
+            printk("Intel PT: CR3 match value is 0");
+            return rtit_ctl;
+        }
+
+        wrmsrl(MSR_IA32_RTIT_CR3_MATCH, event->cr3_match);
+        printk("Intel PT: event->cr3_match: %llu", event->cr3_match);
+        rdmsrl(MSR_IA32_RTIT_CR3_MATCH, match);
+        printk("Intel PT: RTIT_CR3_MATCH: %llu", match);
+        rtit_ctl = RTIT_CTL_CR3EN;
+
+        return rtit_ctl;
+}
+
+//static u64 pt_config_ip_filter(struct perf_event *event)
+//{
+//        u64 rtit_ctl = 0;
+//
+//        if (event->ip_filter_base == 0 || event->ip_filter_limit == 0) {
+//            pr_debug("Intel PT: IP filter base || limit == 0");
+//            return rtit_ctl;
+//        }
+//
+//        wrmsrl(MSR_IA32_RTIT_ADDR0_A, event->ip_filter_base);
+//        wrmsrl(MSR_IA32_RTIT_ADDR0_B, event->ip_filter_limit);
+//
+//        rtit_ctl = 1ull << RTIT_CTL_ADDR0_OFFSET;
+//        return rtit_ctl;
+//}
+
 static u64 pt_config_filters(struct perf_event *event)
 {
 	struct pt_filters *filters = event->hw.addr_filters;
@@ -418,7 +453,9 @@ static void pt_config(struct perf_event *event)
 		wrmsrl(MSR_IA32_RTIT_STATUS, 0);
 	}
 
-	reg = pt_config_filters(event);
+        reg = pt_config_cr3_match(event);
+        //reg |= pt_config_ip_filter(event);
+	reg |= pt_config_filters(event);
 	reg |= RTIT_CTL_TOPA | RTIT_CTL_BRANCH_EN | RTIT_CTL_TRACEEN;
 
 	if (!event->attr.exclude_kernel)

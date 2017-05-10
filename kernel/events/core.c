@@ -4685,8 +4685,8 @@ static int perf_event_cr3_filter(struct perf_event *event)
 
         mm = get_task_mm(task);
         if (!mm) {
-            printk("Intel PT: CR3 filter: NULL mm");
-            return -EINVAL;
+                printk("Intel PT: CR3 filter: NULL mm");
+                return -EINVAL;
         }
 
         event->cr3_match = virt_to_phys(mm->pgd);
@@ -4696,15 +4696,37 @@ static int perf_event_cr3_filter(struct perf_event *event)
         return 0;
 }
 
-static int perf_event_ip_filter_base(struct perf_event *event, unsigned long base)
+/*
+ * @range - the number of the IP range to configure
+ */
+static int perf_event_ip_filter_base(
+    struct perf_event *event,
+    unsigned long base,
+    unsigned long range)
 {
-        event->ip_filter_base = base;
+        if (range == 0) {
+                event->ip_filter_0_base = base;
+        } else if (range == 1) {
+                event->ip_filter_1_base = base;
+        }
+
         return 0;
 }
 
-static int perf_event_ip_filter_limit(struct perf_event *event, unsigned long limit)
+/*
+ * @range - the number of the IP range to configure
+ */
+static int perf_event_ip_filter_limit(
+    struct perf_event *event,
+    unsigned long limit,
+    unsigned long range)
 {
-        event->ip_filter_limit = limit;
+        if (range == 0) {
+                event->ip_filter_0_limit = limit;
+        } else if (range == 1) {
+                event->ip_filter_1_limit = limit;
+        }
+
         return 0;
 }
 
@@ -4765,13 +4787,21 @@ static long _perf_ioctl(struct perf_event *event, unsigned int cmd, unsigned lon
                 printk(KERN_INFO "running perf_ioctl cr3 filter");
                 return perf_event_cr3_filter(event);
 
-        case PERF_EVENT_IOC_IP_FILTER_BASE:
-                printk(KERN_INFO "running perf_ioctl ip filter base");
-                return perf_event_ip_filter_base(event, arg);
+        case PERF_EVENT_IOC_IP_FILTER_0_BASE:
+                printk(KERN_INFO "running perf_ioctl ip filter 0 base");
+                return perf_event_ip_filter_base(event, arg, 0);
 
-        case PERF_EVENT_IOC_IP_FILTER_LIMIT:
-                printk(KERN_INFO "running perf_ioctl ip filter limit");
-                return perf_event_ip_filter_limit(event, arg);
+        case PERF_EVENT_IOC_IP_FILTER_0_LIMIT:
+                printk(KERN_INFO "running perf_ioctl ip filter 0 limit");
+                return perf_event_ip_filter_limit(event, arg, 0);
+
+        case PERF_EVENT_IOC_IP_FILTER_1_BASE:
+                printk(KERN_INFO "running perf_ioctl ip filter 1 base");
+                return perf_event_ip_filter_base(event, arg, 1);
+
+        case PERF_EVENT_IOC_IP_FILTER_1_LIMIT:
+                printk(KERN_INFO "running perf_ioctl ip filter 1 limit");
+                return perf_event_ip_filter_limit(event, arg, 1);
 
 	case PERF_EVENT_IOC_SET_BPF:
 		return perf_event_set_bpf_prog(event, arg);

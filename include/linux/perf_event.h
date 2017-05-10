@@ -683,8 +683,10 @@ struct perf_event {
 	unsigned long			*addr_filters_offs;
 	unsigned long			addr_filters_gen;
         u64                             cr3_match;
-        u64                             ip_filter_base;
-        u64                             ip_filter_limit;
+        u64                             ip_filter_0_base;
+        u64                             ip_filter_0_limit;
+        u64                             ip_filter_1_base;
+        u64                             ip_filter_1_limit;
 
 	void (*destroy)(struct perf_event *);
 	struct rcu_head			rcu_head;

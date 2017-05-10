@@ -389,26 +389,48 @@ static u64 pt_config_cr3_match(struct perf_event *event)
 
 static u64 pt_config_ip_filter(struct perf_event *event)
 {
-        u64 rtit_ctl = 0;
-        u64 base, limit = 0;
+        u64 rtit_ctl = 0, base = 0, limit = 0;
+        unsigned int eax = 0x14, ebx = 0, ecx = 0, edx = 0;
 
-        if (event->ip_filter_base == 0 || event->ip_filter_limit == 0) {
-            pr_debug("Intel PT: IP filter base || limit == 0");
-            return rtit_ctl;
+        __cpuid(&eax, &ebx, &ecx, &edx);
+        if (unlikely((ebx & 0x1) == 0)) {
+                printk("Intel PT: NO support for CR3 filtering");
         }
 
-        wrmsrl(MSR_IA32_RTIT_ADDR0_A, event->ip_filter_base);
-        wrmsrl(MSR_IA32_RTIT_ADDR0_B, event->ip_filter_limit);
-        printk("Intel PT: ip_filter_base: 0x%llx", event->ip_filter_base);
-        printk("Intel PT: ip_filter_limit: 0x%llx", event->ip_filter_limit);
+        if (unlikely((ebx & 0x4) == 0)) {
+                printk("Intel PT: NO support for IP filtering");
+        }
+
+        eax = 0x14;
+        ebx = 0;
+        ecx = 1;
+        edx = 0;
+        __cpuid(&eax, &ebx, &ecx, &edx);
+        printk("Intel PT: Number of IP ranges available for filtering == %u",
+                eax & 0x7);
+
+        printk("Intel PT: IP filter 0: base == 0x%llx, limit == 0x%llx",
+                event->ip_filter_0_base, event->ip_filter_0_limit);
+        printk("Intel PT: IP filter 1: base == 0x%llx, limit == 0x%llx",
+                event->ip_filter_1_base, event->ip_filter_1_limit);
+
+        wrmsrl(MSR_IA32_RTIT_ADDR0_A, event->ip_filter_0_base);
+        wrmsrl(MSR_IA32_RTIT_ADDR0_B, event->ip_filter_0_limit);
+        wrmsrl(MSR_IA32_RTIT_ADDR1_A, event->ip_filter_1_base);
+        wrmsrl(MSR_IA32_RTIT_ADDR1_B, event->ip_filter_1_limit);
 
         rdmsrl(MSR_IA32_RTIT_ADDR0_A, base);
         rdmsrl(MSR_IA32_RTIT_ADDR0_B, limit);
         printk("Intel PT: RTIT_ADDR0_A: 0x%llx", base);
         printk("Intel PT: RTIT_ADDR0_B: 0x%llx", limit);
 
+        rdmsrl(MSR_IA32_RTIT_ADDR1_A, base);
+        rdmsrl(MSR_IA32_RTIT_ADDR1_B, limit);
+        printk("Intel PT: RTIT_ADDR1_A: 0x%llx", base);
+        printk("Intel PT: RTIT_ADDR1_B: 0x%llx", limit);
 
         rtit_ctl = 1ull << RTIT_CTL_ADDR0_OFFSET;
+        rtit_ctl |= 1ull << RTIT_CTL_ADDR1_OFFSET;
         return rtit_ctl;
 }
 

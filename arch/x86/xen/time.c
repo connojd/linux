@@ -38,6 +38,7 @@ static unsigned long xen_tsc_khz(void)
 {
 	struct pvclock_vcpu_time_info *info =
 		&HYPERVISOR_shared_info->vcpu_info[0].time;
+	printk("%s", __func__);
 
 	return pvclock_tsc_khz(info);
 }
@@ -97,6 +98,7 @@ static int xen_pvclock_gtod_notify(struct notifier_block *nb,
 	static bool settime64_supported = true;
 	int ret;
 
+	printk("%s", __func__);
 	now.tv_sec = tk->xtime_sec;
 	now.tv_nsec = (long)(tk->tkr_mono.xtime_nsec >> tk->tkr_mono.shift);
 
@@ -331,6 +333,8 @@ void xen_setup_timer(int cpu)
 	struct clock_event_device *evt = &xevt->evt;
 	int irq;
 
+	printk("%s", __func__);
+
 	WARN(evt->irq >= 0, "IRQ%d for CPU%d is already allocated\n", evt->irq, cpu);
 	if (evt->irq >= 0)
 		xen_teardown_timer(cpu);
@@ -470,6 +474,7 @@ static void __init xen_time_init(void)
 	int cpu = smp_processor_id();
 	struct timespec64 tp;
 
+	printk("%s", __func__);
 	/* As Dom0 is never moved, no penalty on using TSC there */
 	if (xen_initial_domain())
 		xen_clocksource.rating = 275;
@@ -512,6 +517,7 @@ static void __init xen_time_init(void)
 
 void __init xen_init_time_ops(void)
 {
+	printk("%s", __func__);
 	xen_sched_clock_offset = xen_clocksource_read();
 	pv_ops.time = xen_time_ops;
 
@@ -531,6 +537,7 @@ static void xen_hvm_setup_cpu_clockevents(void)
 {
 	int cpu = smp_processor_id();
 	xen_setup_runstate_info(cpu);
+	printk("%s", __func__);
 	/*
 	 * xen_setup_timer(cpu) - snprintf is bad in atomic context. Hence
 	 * doing it xen_hvm_cpu_notify (which gets called by smp_init during
@@ -541,6 +548,7 @@ static void xen_hvm_setup_cpu_clockevents(void)
 
 void __init xen_hvm_init_time_ops(void)
 {
+	printk("%s", __func__);
 	/*
 	 * vector callback is needed otherwise we cannot receive interrupts
 	 * on cpu > 0 and at this point we don't know how many cpus are

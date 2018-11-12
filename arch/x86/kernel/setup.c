@@ -692,7 +692,7 @@ static void __init trim_snb_memory(void)
 	 * already been reserved.
 	 */
 	memblock_reserve(0, 1<<20);
-	
+
 	for (i = 0; i < ARRAY_SIZE(bad_pages); i++) {
 		if (memblock_reserve(bad_pages[i], PAGE_SIZE))
 			printk(KERN_WARNING "failed to reserve 0x%08lx\n",
@@ -784,7 +784,7 @@ static void __init trim_low_memory_range(void)
 {
 	memblock_reserve(0, ALIGN(reserve_low, PAGE_SIZE));
 }
-	
+
 /*
  * Dump out kernel offset information on panic.
  */
@@ -869,11 +869,16 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	olpc_ofw_detect();
 
+        printk("%s: %d", __func__, 0);
 	idt_setup_early_traps();
 	early_cpu_init();
+        printk("%s: %d", __func__, 1);
 	arch_init_ideal_nops();
+        printk("%s: %d", __func__, 2);
 	jump_label_init();
+        printk("%s: %d", __func__, 3);
 	early_ioremap_init();
+        printk("%s: %d", __func__, 4);
 
 	setup_olpc_ofw_pgd();
 
@@ -910,10 +915,13 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	x86_init.oem.arch_setup();
+        printk("%s: %d", __func__, 5);
 
 	iomem_resource.end = (1ULL << boot_cpu_data.x86_phys_bits) - 1;
 	e820__memory_setup();
+        printk("%s: %d", __func__, 6);
 	parse_setup_data();
+        printk("%s: %d", __func__, 7);
 
 	copy_edd();
 
@@ -959,6 +967,7 @@ void __init setup_arch(char **cmdline_p)
 	x86_configure_nx();
 
 	parse_early_param();
+        printk("%s: %d", __func__, 8);
 
 	if (efi_enabled(EFI_BOOT))
 		efi_memblock_x86_reserve_range();
@@ -999,23 +1008,31 @@ void __init setup_arch(char **cmdline_p)
 	}
 
 	e820__reserve_setup_data();
+        printk("%s: %d", __func__, 9);
 	e820__finish_early_params();
+        printk("%s: %d", __func__, 10);
 
 	if (efi_enabled(EFI_BOOT))
 		efi_init();
 
 	dmi_scan_machine();
+        printk("%s: %d", __func__, 11);
 	dmi_memdev_walk();
+        printk("%s: %d", __func__, 12);
 	dmi_set_dump_stack_arch_desc();
+        printk("%s: %d", __func__, 13);
 
 	/*
 	 * VMware detection requires dmi to be available, so this
 	 * needs to be done after dmi_scan_machine(), for the boot CPU.
 	 */
 	init_hypervisor_platform();
+        printk("%s: %d", __func__, 14);
 
 	tsc_early_init();
+        printk("%s: %d", __func__, 15);
 	x86_init.resources.probe_roms();
+        printk("%s: %d", __func__, 16);
 
 	/* after parse_early_param, so could debug it */
 	insert_resource(&iomem_resource, &code_resource);
@@ -1023,7 +1040,9 @@ void __init setup_arch(char **cmdline_p)
 	insert_resource(&iomem_resource, &bss_resource);
 
 	e820_add_kernel_range();
+        printk("%s: %d", __func__, 17);
 	trim_bios_range();
+        printk("%s: %d", __func__, 18);
 #ifdef CONFIG_X86_32
 	if (ppro_with_ram_bug()) {
 		e820__range_update(0x70000000ULL, 0x40000ULL, E820_TYPE_RAM,
@@ -1034,6 +1053,7 @@ void __init setup_arch(char **cmdline_p)
 	}
 #else
 	early_gart_iommu_check();
+        printk("%s: %d", __func__, 19);
 #endif
 
 	/*
@@ -1041,9 +1061,11 @@ void __init setup_arch(char **cmdline_p)
 	 * we are rounding upwards:
 	 */
 	max_pfn = e820__end_of_ram_pfn();
+        printk("%s: %d", __func__, 20);
 
 	/* update e820 for memory not covered by WB MTRRs */
 	mtrr_bp_init();
+        printk("%s: %d", __func__, 21);
 	if (mtrr_trim_uncached_memory(max_pfn))
 		max_pfn = e820__end_of_ram_pfn();
 
@@ -1055,6 +1077,7 @@ void __init setup_arch(char **cmdline_p)
 	 * effect.
 	 */
 	init_cache_modes();
+        printk("%s: %d", __func__, 22);
 
 	/*
 	 * Define random base addresses for memory sections after max_pfn is
@@ -1067,6 +1090,7 @@ void __init setup_arch(char **cmdline_p)
 	find_low_pfn_range();
 #else
 	check_x2apic();
+        printk("%s: %d", __func__, 23);
 
 	/* How many end-of-memory variables you have, grandma! */
 	/* need this before calling reserve_initrd */
@@ -1082,10 +1106,13 @@ void __init setup_arch(char **cmdline_p)
 	 * Find and reserve possible boot-time SMP configuration:
 	 */
 	find_smp_config();
+        printk("%s: %d", __func__, 24);
 
 	reserve_ibft_region();
+        printk("%s: %d", __func__, 25);
 
 	early_alloc_pgt_buf();
+        printk("%s: %d", __func__, 26);
 
 	/*
 	 * Need to conclude brk, before e820__memblock_setup()
@@ -1093,13 +1120,19 @@ void __init setup_arch(char **cmdline_p)
 	 *  brk area.
 	 */
 	reserve_brk();
+        printk("%s: %d", __func__, 27);
 
 	cleanup_highmap();
+        printk("%s: %d", __func__, 28);
 
 	memblock_set_current_limit(ISA_END_ADDRESS);
+        printk("%s: %d", __func__, 29);
 	e820__memblock_setup();
+        printk("%s: %d", __func__, 30);
 
 	reserve_bios_regions();
+        printk("%s: %d", __func__, 31);
+
 
 	if (efi_enabled(EFI_MEMMAP)) {
 		efi_fake_memmap();
@@ -1126,13 +1159,19 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	reserve_real_mode();
+        printk("%s: %d", __func__, 32);
 
 	trim_platform_memory_ranges();
+        printk("%s: %d", __func__, 33);
 	trim_low_memory_range();
+        printk("%s: %d", __func__, 34);
 
 	init_mem_mapping();
+        printk("%s: %d", __func__, 35);
 
 	idt_setup_early_pf();
+        printk("%s: %d", __func__, 36);
+
 
 	/*
 	 * Update mmu_cr4_features (and, indirectly, trampoline_cr4_features)
@@ -1173,39 +1212,52 @@ void __init setup_arch(char **cmdline_p)
 	}
 
 	reserve_initrd();
+        printk("%s: %d", __func__, 37);
 
 	acpi_table_upgrade();
+        printk("%s: %d", __func__, 38);
 
 	vsmp_init();
+        printk("%s: %d", __func__, 39);
 
 	io_delay_init();
+        printk("%s: %d", __func__, 40);
 
 	early_platform_quirks();
+        printk("%s: %d", __func__, 41);
 
 	/*
 	 * Parse the ACPI tables for possible boot-time SMP configuration.
 	 */
 	acpi_boot_table_init();
+        printk("%s: %d", __func__, 42);
 
 	early_acpi_boot_init();
+        printk("%s: %d", __func__, 43);
 
 	initmem_init();
+        printk("%s: %d", __func__, 44);
 	dma_contiguous_reserve(max_pfn_mapped << PAGE_SHIFT);
+        printk("%s: %d", __func__, 45);
 
 	/*
 	 * Reserve memory for crash kernel after SRAT is parsed so that it
 	 * won't consume hotpluggable memory.
 	 */
 	reserve_crashkernel();
+        printk("%s: %d", __func__, 46);
 
 	memblock_find_dma_reserve();
+        printk("%s: %d", __func__, 47);
 
 	if (!early_xdbc_setup_hardware())
 		early_xdbc_register_console();
 
 	x86_init.paging.pagetable_init();
+        printk("%s: %d", __func__, 48);
 
 	kasan_init();
+        printk("%s: %d", __func__, 49);
 
 	/*
 	 * Sync back kernel address range.
@@ -1214,47 +1266,65 @@ void __init setup_arch(char **cmdline_p)
 	 * this call?
 	 */
 	sync_initial_page_table();
+        printk("%s: %d", __func__, 50);
 
 	tboot_probe();
+        printk("%s: %d", __func__, 51);
 
 	map_vsyscall();
+        printk("%s: %d", __func__, 52);
 
 	generic_apic_probe();
+        printk("%s: %d", __func__, 53);
 
 	early_quirks();
+        printk("%s: %d", __func__, 54);
 
 	/*
 	 * Read APIC and some other early information from ACPI tables.
 	 */
 	acpi_boot_init();
+        printk("%s: %d", __func__, 55);
 	sfi_init();
+        printk("%s: %d", __func__, 56);
 	x86_dtb_init();
+        printk("%s: %d", __func__, 57);
 
 	/*
 	 * get boot-time SMP configuration:
 	 */
 	get_smp_config();
+        printk("%s: %d", __func__, 58);
 
 	/*
 	 * Systems w/o ACPI and mptables might not have it mapped the local
 	 * APIC yet, but prefill_possible_map() might need to access it.
 	 */
 	init_apic_mappings();
+        printk("%s: %d", __func__, 59);
 
 	prefill_possible_map();
+        printk("%s: %d", __func__, 60);
 
 	init_cpu_to_node();
+        printk("%s: %d", __func__, 61);
 
 	io_apic_init_mappings();
+        printk("%s: %d", __func__, 62);
 
 	x86_init.hyper.guest_late_init();
+        printk("%s: %d", __func__, 63);
 
 	e820__reserve_resources();
+        printk("%s: %d", __func__, 64);
 	e820__register_nosave_regions(max_pfn);
+        printk("%s: %d", __func__, 65);
 
 	x86_init.resources.reserve_resources();
+        printk("%s: %d", __func__, 66);
 
 	e820__setup_pci_gap();
+        printk("%s: %d", __func__, 67);
 
 #ifdef CONFIG_VT
 #if defined(CONFIG_VGA_CONSOLE)
@@ -1265,10 +1335,13 @@ void __init setup_arch(char **cmdline_p)
 #endif
 #endif
 	x86_init.oem.banner();
+        printk("%s: %d", __func__, 68);
 
 	x86_init.timers.wallclock_init();
+        printk("%s: %d", __func__, 69);
 
 	mcheck_init();
+        printk("%s: %d", __func__, 70);
 
 	register_refined_jiffies(CLOCK_TICK_RATE);
 
@@ -1278,6 +1351,7 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	unwind_init();
+        printk("%s: %d", __func__, 71);
 }
 
 /*

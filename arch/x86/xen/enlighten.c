@@ -15,7 +15,7 @@
 #include <asm/xen/hypercall.h>
 #include <asm/xen/hypervisor.h>
 #include <asm/cpu.h>
-#include <asm/e820/api.h> 
+#include <asm/e820/api.h>
 
 #include "xen-ops.h"
 #include "smp.h"
@@ -226,6 +226,9 @@ int xen_vcpu_setup(int cpu)
 		info.mfn = arbitrary_virt_to_mfn(vcpup);
 		info.offset = offset_in_page(vcpup);
 
+                printk("%s: mfn %lld", __func__, info.mfn);
+                printk("%s: offset %d", __func__, info.offset);
+
 		/*
 		 * Check to see if the hypervisor will put the vcpu_info
 		 * structure where we want it, which allows direct access via
@@ -249,6 +252,11 @@ int xen_vcpu_setup(int cpu)
 			 * later ones fail to.
 			 */
 			per_cpu(xen_vcpu, cpu) = vcpup;
+
+			printk("%s: info->time.tsc_timestamp: %llu", __func__, per_cpu(xen_vcpu, cpu)->time.tsc_timestamp);
+			printk("%s: info->time.system_time: %llu", __func__, per_cpu(xen_vcpu, cpu)->time.system_time);
+			printk("%s: info->time.tsc_to_system_mul: %u", __func__, per_cpu(xen_vcpu, cpu)->time.tsc_to_system_mul);
+			printk("%s: info->time.tsc_shift: %u", __func__, per_cpu(xen_vcpu, cpu)->time.tsc_shift);
 		}
 	}
 

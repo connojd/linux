@@ -553,9 +553,11 @@ asmlinkage __visible void __init start_kernel(void)
 	 * enable them.
 	 */
 	boot_cpu_init();
+	printk("%s: %d", __func__, 0);
 	page_address_init();
 	pr_notice("%s", linux_banner);
 	setup_arch(&command_line);
+	printk("%s: %d", __func__, 1);
 	/*
 	 * Set up the the initial canary and entropy after arch
 	 * and after adding latent and command line entropy.
@@ -565,13 +567,20 @@ asmlinkage __visible void __init start_kernel(void)
 	boot_init_stack_canary();
 	mm_init_cpumask(&init_mm);
 	setup_command_line(command_line);
+	printk("%s: %d", __func__, 2);
 	setup_nr_cpu_ids();
+	printk("%s: %d", __func__, 3);
 	setup_per_cpu_areas();
+	printk("%s: %d", __func__, 4);
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
+	printk("%s: %d", __func__, 5);
 	boot_cpu_hotplug_init();
+	printk("%s: %d", __func__, 6);
 
 	build_all_zonelists(NULL);
+	printk("%s: %d", __func__, 7);
 	page_alloc_init();
+	printk("%s: %d", __func__, 8);
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
 	parse_early_param();
@@ -584,16 +593,22 @@ asmlinkage __visible void __init start_kernel(void)
 			   NULL, set_init_arg);
 
 	jump_label_init();
+	printk("%s: %d", __func__, 9);
 
 	/*
 	 * These use large bootmem allocations and must precede
 	 * kmem_cache_init()
 	 */
 	setup_log_buf(0);
+	printk("%s: %d", __func__, 10);
 	vfs_caches_init_early();
+	printk("%s: %d", __func__, 11);
 	sort_main_extable();
+	printk("%s: %d", __func__, 12);
 	trap_init();
+	printk("%s: %d", __func__, 13);
 	mm_init();
+	printk("%s: %d", __func__, 14);
 
 	ftrace_init();
 
@@ -606,6 +621,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * time - but meanwhile we still have a functioning scheduler.
 	 */
 	sched_init();
+	printk("%s: %d", __func__, 15);
 	/*
 	 * Disable preemption - early bootup scheduling is extremely
 	 * fragile until we cpu_idle() for the first time.
@@ -621,6 +637,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * workqueue to take non-housekeeping into account.
 	 */
 	housekeeping_init();
+	printk("%s: %d", __func__, 16);
 
 	/*
 	 * Allow workqueue creation and work item queueing/cancelling
@@ -628,34 +645,52 @@ asmlinkage __visible void __init start_kernel(void)
 	 * workqueue_init().
 	 */
 	workqueue_init_early();
+	printk("%s: %d", __func__, 17);
 
 	rcu_init();
+	printk("%s: %d", __func__, 18);
 
 	/* Trace events are available after this */
 	trace_init();
+	printk("%s: %d", __func__, 19);
 
 	if (initcall_debug)
 		initcall_debug_enable();
 
 	context_tracking_init();
+	printk("%s: %d", __func__, 20);
 	/* init some links before init_ISA_irqs() */
 	early_irq_init();
+	printk("%s: %d", __func__, 21);
 	init_IRQ();
+	printk("%s: %d", __func__, 22);
 	tick_init();
+	printk("%s: %d", __func__, 23);
 	rcu_init_nohz();
+	printk("%s: %d", __func__, 24);
 	init_timers();
+	printk("%s: %d", __func__, 25);
 	hrtimers_init();
+	printk("%s: %d", __func__, 26);
 	softirq_init();
+	printk("%s: %d", __func__, 27);
 	timekeeping_init();
+	printk("%s: %d", __func__, 28);
 	time_init();
+	printk("%s: %d", __func__, 29);
 	printk_safe_init();
+	printk("%s: %d", __func__, 30);
 	perf_event_init();
+	printk("%s: %d", __func__, 31);
 	profile_init();
+	printk("%s: %d", __func__, 32);
 	call_function_init();
+	printk("%s: %d", __func__, 33);
 	WARN(!irqs_disabled(), "Interrupts were enabled early\n");
 
 	early_boot_irqs_disabled = false;
 	local_irq_enable();
+	printk("%s: %d", __func__, 34);
 
 	kmem_cache_init_late();
 
@@ -665,11 +700,13 @@ asmlinkage __visible void __init start_kernel(void)
 	 * this. But we do want output early, in case something goes wrong.
 	 */
 	console_init();
+	printk("%s: %d", __func__, 35);
 	if (panic_later)
 		panic("Too many boot %s vars at `%s'", panic_later,
 		      panic_param);
 
 	lockdep_init();
+	printk("%s: %d", __func__, 36);
 
 	/*
 	 * Need to run this when irqs are enabled, because it wants
@@ -677,6 +714,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * too:
 	 */
 	locking_selftest();
+	printk("%s: %d", __func__, 37);
 
 	/*
 	 * This needs to be called before any devices perform DMA
@@ -685,6 +723,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * not cause "plain-text" data to be decrypted when accessed.
 	 */
 	mem_encrypt_init();
+	printk("%s: %d", __func__, 38);
 
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (initrd_start && !initrd_below_start_ok &&
@@ -696,46 +735,78 @@ asmlinkage __visible void __init start_kernel(void)
 	}
 #endif
 	page_ext_init();
+	printk("%s: %d", __func__, 39);
 	kmemleak_init();
+	printk("%s: %d", __func__, 40);
 	debug_objects_mem_init();
+	printk("%s: %d", __func__, 41);
 	setup_per_cpu_pageset();
+	printk("%s: %d", __func__, 42);
 	numa_policy_init();
+	printk("%s: %d", __func__, 43);
 	acpi_early_init();
+	printk("%s: %d", __func__, 44);
 	if (late_time_init)
 		late_time_init();
 	sched_clock_init();
+	printk("%s: %d", __func__, 45);
 	calibrate_delay();
+	printk("%s: %d", __func__, 46);
 	pid_idr_init();
+	printk("%s: %d", __func__, 47);
 	anon_vma_init();
+	printk("%s: %d", __func__, 48);
 #ifdef CONFIG_X86
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		efi_enter_virtual_mode();
 #endif
 	thread_stack_cache_init();
+	printk("%s: %d", __func__, 49);
 	cred_init();
+	printk("%s: %d", __func__, 50);
 	fork_init();
+	printk("%s: %d", __func__, 51);
 	proc_caches_init();
+	printk("%s: %d", __func__, 52);
 	uts_ns_init();
+	printk("%s: %d", __func__, 53);
 	buffer_init();
+	printk("%s: %d", __func__, 54);
 	key_init();
+	printk("%s: %d", __func__, 55);
 	security_init();
+	printk("%s: %d", __func__, 56);
 	dbg_late_init();
+	printk("%s: %d", __func__, 57);
 	vfs_caches_init();
+	printk("%s: %d", __func__, 58);
 	pagecache_init();
+	printk("%s: %d", __func__, 59);
 	signals_init();
+	printk("%s: %d", __func__, 60);
 	seq_file_init();
+	printk("%s: %d", __func__, 61);
 	proc_root_init();
+	printk("%s: %d", __func__, 62);
 	nsfs_init();
+	printk("%s: %d", __func__, 63);
 	cpuset_init();
+	printk("%s: %d", __func__, 64);
 	cgroup_init();
+	printk("%s: %d", __func__, 65);
 	taskstats_init_early();
+	printk("%s: %d", __func__, 66);
 	delayacct_init();
+	printk("%s: %d", __func__, 67);
 
 	check_bugs();
 
 	acpi_subsystem_init();
+	printk("%s: %d", __func__, 68);
 	arch_post_acpi_subsys_init();
+	printk("%s: %d", __func__, 69);
 	sfi_init_late();
+	printk("%s: %d", __func__, 70);
 
 	if (efi_enabled(EFI_RUNTIME_SERVICES)) {
 		efi_free_boot_services();
@@ -743,6 +814,7 @@ asmlinkage __visible void __init start_kernel(void)
 
 	/* Do the rest non-__init'ed, we're now alive */
 	arch_call_rest_init();
+	printk("%s: %d", __func__, 71);
 }
 
 /* Call all constructor functions linked into the kernel. */

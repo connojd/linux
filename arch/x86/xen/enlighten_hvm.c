@@ -31,6 +31,7 @@ void xen_hvm_init_shared_info(void)
 {
 	struct xen_add_to_physmap xatp;
 
+	printk("%s", __func__);
 	xatp.domid = DOMID_SELF;
 	xatp.idx = 0;
 	xatp.space = XENMAPSPACE_shared_info;
@@ -43,6 +44,7 @@ static void __init reserve_shared_info(void)
 {
 	u64 pa;
 
+	printk("%s", __func__);
 	/*
 	 * Search for a free page starting at 4kB physical address.
 	 * Low memory is preferred to avoid an EPT large page split up
@@ -68,6 +70,7 @@ static void __init xen_hvm_init_mem_mapping(void)
 	early_memunmap(HYPERVISOR_shared_info, PAGE_SIZE);
 	HYPERVISOR_shared_info = __va(PFN_PHYS(shared_info_pfn));
 
+	printk("%s", __func__);
 	/*
 	 * The virtual address of the shared_info page has changed, so
 	 * the vcpu_info pointer for VCPU 0 is now stale.
@@ -87,6 +90,7 @@ static void __init init_hvm_pv_info(void)
 	int major, minor;
 	uint32_t eax, ebx, ecx, edx, base;
 
+	printk("%s", __func__);
 	base = xen_cpuid_base();
 	eax = cpuid_eax(base + 1);
 
@@ -177,6 +181,7 @@ static int xen_cpu_dead_hvm(unsigned int cpu)
 
 static void __init xen_hvm_guest_init(void)
 {
+	printk("%s", __func__);
 	if (xen_pv_domain())
 		return;
 
@@ -243,6 +248,7 @@ static uint32_t __init xen_platform_hvm(void)
 static __init void xen_hvm_guest_late_init(void)
 {
 #ifdef CONFIG_XEN_PVH
+	printk("%s", __func__);
 	/* Test for PVH domain (PVH boot path taken overrides ACPI flags). */
 	if (!xen_pvh &&
 	    (x86_platform.legacy.rtc || !x86_platform.legacy.no_vga))

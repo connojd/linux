@@ -39,6 +39,8 @@ unsigned long pvclock_tsc_khz(struct pvclock_vcpu_time_info *src)
 {
 	u64 pv_tsc_khz = 1000000ULL << 32;
 
+        printk("%s: tsc_to_system_mul: %llx", __func__, src->tsc_to_system_mul);
+
 	do_div(pv_tsc_khz, src->tsc_to_system_mul);
 	if (src->tsc_shift < 0)
 		pv_tsc_khz <<= -src->tsc_shift;

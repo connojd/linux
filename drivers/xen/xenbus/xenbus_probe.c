@@ -765,6 +765,16 @@ static struct notifier_block xenbus_resume_nb = {
 	.notifier_call = xenbus_resume_cb,
 };
 
+static int local_xenstore(void)
+{
+    if (!HYPERVISOR_shared_info) {
+        printk(KERN_WARNING "Invalid HYPERVISOR_shared_info\n");
+        return 0;
+    }
+
+    return HYPERVISOR_shared_info->vcpu_info[0].time.pad0 & SIF_LOCAL_STORE;
+}
+
 static int __init xenbus_init(void)
 {
 	int err = 0;
@@ -786,6 +796,8 @@ static int __init xenbus_init(void)
 		xen_store_domain_type = XS_LOCAL;
 	if (xen_pv_domain() && xen_start_info->store_evtchn)
 		xenstored_ready = 1;
+        if (xen_pvh_domain() && local_xenstore())
+		xen_store_domain_type = XS_LOCAL;
 
 	switch (xen_store_domain_type) {
 	case XS_LOCAL:

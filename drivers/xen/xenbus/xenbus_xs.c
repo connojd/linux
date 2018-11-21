@@ -731,9 +731,23 @@ static bool xen_strict_xenbus_quirk(void)
 	return false;
 
 }
+
+static int local_xenstore(void)
+{
+    if (!HYPERVISOR_shared_info) {
+        printk(KERN_WARNING "Invalid HYPERVISOR_shared_info\n");
+        return 0;
+    }
+
+    return HYPERVISOR_shared_info->vcpu_info[0].time.pad0 & SIF_LOCAL_STORE;
+}
+
 static void xs_reset_watches(void)
 {
 	int err;
+
+	if (xen_pvh_domain() && local_xenstore())
+                return;
 
 	if (!xen_hvm_domain() || xen_initial_domain())
 		return;

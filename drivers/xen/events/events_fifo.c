@@ -432,6 +432,8 @@ static int xen_evtchn_cpu_dead(unsigned int cpu)
 
 int __init xen_evtchn_fifo_init(void)
 {
+        struct irq_info info;
+
 	int cpu = smp_processor_id();
 	int ret;
 
@@ -440,6 +442,13 @@ int __init xen_evtchn_fifo_init(void)
 		return ret;
 
 	pr_info("Using FIFO-based ABI\n");
+
+        info.evtchn = 0;
+        ret = evtchn_fifo_setup(&info);
+	if (ret < 0)
+		return ret;
+
+	pr_info("Initialized array page\n");
 
 	evtchn_ops = &evtchn_ops_fifo;
 

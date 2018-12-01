@@ -58,6 +58,10 @@ static const struct freq_desc freq_desc_ann = {
 	1, { 83300, 100000, 133300, 100000, 0, 0, 0, 0 }
 };
 
+static const struct freq_desc freq_desc_nuc = {
+	1, { 100000 }
+};
+
 static const struct x86_cpu_id tsc_msr_cpu_ids[] = {
 	INTEL_CPU_FAM6(ATOM_SALTWELL_MID,	freq_desc_pnw),
 	INTEL_CPU_FAM6(ATOM_SALTWELL_TABLET,	freq_desc_clv),
@@ -65,6 +69,7 @@ static const struct x86_cpu_id tsc_msr_cpu_ids[] = {
 	INTEL_CPU_FAM6(ATOM_SILVERMONT_MID,	freq_desc_tng),
 	INTEL_CPU_FAM6(ATOM_AIRMONT,		freq_desc_cht),
 	INTEL_CPU_FAM6(ATOM_AIRMONT_MID,	freq_desc_ann),
+	INTEL_CPU_FAM6(BROADWELL_CORE,	        freq_desc_nuc),
 	{}
 };
 
@@ -95,10 +100,12 @@ unsigned long cpu_khz_from_msr(void)
 	}
 
 	/* Get FSB FREQ ID */
-	rdmsr(MSR_FSB_FREQ, lo, hi);
-
-	/* Map CPU reference clock freq ID(0-7) to CPU reference clock freq(KHz) */
-	freq = freq_desc->freqs[lo & 0x7];
+        if (id->model != INTEL_FAM6_BROADWELL_CORE) {
+	    rdmsr(MSR_FSB_FREQ, lo, hi);
+	    /* Map CPU reference clock freq ID(0-7) to CPU reference clock freq(KHz) */
+	    freq = freq_desc->freqs[lo & 0x7];
+        } else
+            freq = 100000;
 
 	/* TSC frequency = maximum resolved freq * maximum resolved bus ratio */
 	res = freq * ratio;

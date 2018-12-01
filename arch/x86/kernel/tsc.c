@@ -28,6 +28,8 @@
 #include <asm/i8259.h>
 #include <asm/uv/uv.h>
 
+#include <xen/interface/xen.h>
+
 unsigned int __read_mostly cpu_khz;	/* TSC clocks / usec, not used here */
 EXPORT_SYMBOL(cpu_khz);
 
@@ -603,6 +605,16 @@ success:
 	return delta;
 }
 
+static int bfvmm_guest(void)
+{
+    if (!HYPERVISOR_shared_info) {
+        printk(KERN_WARNING "Invalid HYPERVISOR_shared_info\n");
+        return 0;
+    }
+
+    return HYPERVISOR_shared_info->vcpu_info[0].time.pad0 & SIF_BFV_GUEST;
+}
+
 /**
  * native_calibrate_tsc
  * Determine TSC frequency via CPUID, else return 0.
@@ -660,6 +672,15 @@ unsigned long native_calibrate_tsc(void)
 	 */
 	if (boot_cpu_data.x86_model == INTEL_FAM6_ATOM_GOLDMONT)
 		setup_force_cpu_cap(X86_FEATURE_TSC_RELIABLE);
+
+        /*
+         * If running as a bareflank guest, TSC is returned
+         * directly through ecx
+         */
+        if (bfvmm_guest()) {
+		setup_force_cpu_cap(X86_FEATURE_TSC_RELIABLE);
+                return crystal_khz;
+        }
 
 	return crystal_khz * ebx_numerator / eax_denominator;
 }

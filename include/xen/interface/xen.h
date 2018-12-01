@@ -669,6 +669,7 @@ struct start_info {
 #define SIF_MOD_START_PFN   (1<<3)  /* Is mod_start a PFN? */
 #define SIF_VIRT_P2M_4TOOLS (1<<4)  /* Do Xen tools understand a virt. mapped */
 #define SIF_LOCAL_STORE     (1<<5)  /* Does this domain have a local xenstore? */
+#define SIF_BFV_GUEST       (1<<6)  /* Is this domain a barflank guest? */
 				    /* P->M making the 3 level tree obsolete? */
 #define SIF_PM_MASK       (0xFF<<8) /* reserve 1 byte for xen-pm options */
 

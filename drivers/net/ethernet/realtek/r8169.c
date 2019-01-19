@@ -5097,6 +5097,8 @@ static void rtl_hw_start_8411(struct rtl8169_private *tp)
 
 static void rtl_hw_start_8168g(struct rtl8169_private *tp)
 {
+        printk("%s: %d", __func__, __LINE__);
+
 	rtl_eri_write(tp, 0xc8, ERIAR_MASK_0101, 0x080002, ERIAR_EXGMAC);
 	rtl_eri_write(tp, 0xcc, ERIAR_MASK_0001, 0x38, ERIAR_EXGMAC);
 	rtl_eri_write(tp, 0xd0, ERIAR_MASK_0001, 0x48, ERIAR_EXGMAC);
@@ -5151,12 +5153,19 @@ static void rtl_hw_start_8168g_2(struct rtl8169_private *tp)
 		{ 0x1e, 0xffff,	0x20eb }
 	};
 
+        printk("%s: %d", __func__, __LINE__);
+
 	rtl_hw_start_8168g(tp);
+
+        printk("%s: %d", __func__, __LINE__);
 
 	/* disable aspm and clock request before access ephy */
 	RTL_W8(tp, Config2, RTL_R8(tp, Config2) & ~ClkReqEn);
+        printk("%s: %d", __func__, __LINE__);
 	RTL_W8(tp, Config5, RTL_R8(tp, Config5) & ~ASPM_en);
+        printk("%s: %d", __func__, __LINE__);
 	rtl_ephy_init(tp, e_info_8168g_2, ARRAY_SIZE(e_info_8168g_2));
+        printk("%s: %d", __func__, __LINE__);
 }
 
 static void rtl_hw_start_8411_2(struct rtl8169_private *tp)
@@ -6461,30 +6470,41 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 	struct rtl8169_private *tp = dev_instance;
 	u16 status = rtl_get_events(tp);
 
-	if (status == 0xffff || !(status & (RTL_EVENT_NAPI | tp->event_slow)))
+        printk("%s: %d", __func__, __LINE__);
+
+	if (status == 0xffff || !(status & (RTL_EVENT_NAPI | tp->event_slow))) {
+                printk("%s: %d", __func__, __LINE__);
 		return IRQ_NONE;
+        }
 
 	if (unlikely(status & SYSErr)) {
 		rtl8169_pcierr_interrupt(tp->dev);
+                printk("%s: %d", __func__, __LINE__);
 		goto out;
 	}
 
-	if (status & LinkChg)
+	if (status & LinkChg) {
+                printk("%s: %d", __func__, __LINE__);
 		phy_mac_interrupt(tp->dev->phydev);
+        }
 
 	if (unlikely(status & RxFIFOOver &&
 	    tp->mac_version == RTL_GIGA_MAC_VER_11)) {
+                printk("%s: %d", __func__, __LINE__);
 		netif_stop_queue(tp->dev);
 		/* XXX - Hack alert. See rtl_task(). */
 		set_bit(RTL_FLAG_TASK_RESET_PENDING, tp->wk.flags);
 	}
 
 	if (status & RTL_EVENT_NAPI) {
+                printk("%s: %d", __func__, __LINE__);
 		rtl_irq_disable(tp);
 		napi_schedule_irqoff(&tp->napi);
 	}
 out:
+        printk("%s: %d", __func__, __LINE__);
 	rtl_ack_events(tp, status);
+        printk("%s: %d", __func__, __LINE__);
 
 	return IRQ_HANDLED;
 }

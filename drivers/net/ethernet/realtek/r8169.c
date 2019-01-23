@@ -2177,7 +2177,7 @@ static void rtl8169_get_mac_version(struct rtl8169_private *tp,
 
 static void rtl8169_print_mac_version(struct rtl8169_private *tp)
 {
-	netif_dbg(tp, drv, tp->dev, "mac_version = 0x%02x\n", tp->mac_version);
+	printk("%s: mac_version = 0x%02x\n", __func__, tp->mac_version);
 }
 
 struct phy_reg {
@@ -5136,6 +5136,8 @@ static void rtl_hw_start_8168g_1(struct rtl8169_private *tp)
 		{ 0x19, 0x8000,	0x0000 }
 	};
 
+        printk("%s: %d", __func__, __LINE__);
+
 	rtl_hw_start_8168g(tp);
 
 	/* disable aspm and clock request before access ephy */
@@ -6504,7 +6506,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 out:
         printk("%s: %d", __func__, __LINE__);
 	rtl_ack_events(tp, status);
-        printk("%s: %d", __func__, __LINE__);
+        printk("%s: %d, status: %d", __func__, __LINE__, status);
 
 	return IRQ_HANDLED;
 }
@@ -6690,77 +6692,108 @@ static int rtl_open(struct net_device *dev)
 
 	pm_runtime_get_sync(&pdev->dev);
 
+        printk("%s: %d", __func__, __LINE__);
+
 	/*
 	 * Rx and Tx descriptors needs 256 bytes alignment.
 	 * dma_alloc_coherent provides more.
 	 */
 	tp->TxDescArray = dma_alloc_coherent(&pdev->dev, R8169_TX_RING_BYTES,
 					     &tp->TxPhyAddr, GFP_KERNEL);
+        printk("%s: %d", __func__, __LINE__);
 	if (!tp->TxDescArray)
 		goto err_pm_runtime_put;
 
+        printk("%s: %d", __func__, __LINE__);
 	tp->RxDescArray = dma_alloc_coherent(&pdev->dev, R8169_RX_RING_BYTES,
 					     &tp->RxPhyAddr, GFP_KERNEL);
+        printk("%s: %d", __func__, __LINE__);
 	if (!tp->RxDescArray)
 		goto err_free_tx_0;
 
+        printk("%s: %d", __func__, __LINE__);
 	retval = rtl8169_init_ring(tp);
+        printk("%s: %d", __func__, __LINE__);
 	if (retval < 0)
 		goto err_free_rx_1;
 
+        printk("%s: %d", __func__, __LINE__);
 	INIT_WORK(&tp->wk.work, rtl_task);
 
+        printk("%s: %d", __func__, __LINE__);
 	smp_mb();
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_request_firmware(tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	retval = pci_request_irq(pdev, 0, rtl8169_interrupt, NULL, tp,
 				 dev->name);
+        printk("%s: %d", __func__, __LINE__);
 	if (retval < 0)
 		goto err_release_fw_2;
 
+        printk("%s: %d", __func__, __LINE__);
 	retval = r8169_phy_connect(tp);
+        printk("%s: %d", __func__, __LINE__);
 	if (retval)
 		goto err_free_irq;
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_lock_work(tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	set_bit(RTL_FLAG_TASK_ENABLED, tp->wk.flags);
 
+        printk("%s: %d", __func__, __LINE__);
 	napi_enable(&tp->napi);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl8169_init_phy(dev, tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_pll_power_up(tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_hw_start(tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	if (!rtl8169_init_counter_offsets(tp))
 		netif_warn(tp, hw, dev, "counter reset/update failed\n");
 
+        printk("%s: %d", __func__, __LINE__);
 	phy_start(dev->phydev);
+        printk("%s: %d", __func__, __LINE__);
 	netif_start_queue(dev);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_unlock_work(tp);
 
+        printk("%s: %d", __func__, __LINE__);
 	pm_runtime_put_sync(&pdev->dev);
 out:
+        printk("%s: %d", __func__, __LINE__);
 	return retval;
 
 err_free_irq:
+        printk("%s: %d", __func__, __LINE__);
 	pci_free_irq(pdev, 0, tp);
 err_release_fw_2:
+        printk("%s: %d", __func__, __LINE__);
 	rtl_release_firmware(tp);
 	rtl8169_rx_clear(tp);
 err_free_rx_1:
+        printk("%s: %d", __func__, __LINE__);
 	dma_free_coherent(&pdev->dev, R8169_RX_RING_BYTES, tp->RxDescArray,
 			  tp->RxPhyAddr);
 	tp->RxDescArray = NULL;
 err_free_tx_0:
+        printk("%s: %d", __func__, __LINE__);
 	dma_free_coherent(&pdev->dev, R8169_TX_RING_BYTES, tp->TxDescArray,
 			  tp->TxPhyAddr);
 	tp->TxDescArray = NULL;
 err_pm_runtime_put:
+        printk("%s: %d", __func__, __LINE__);
 	pm_runtime_put_noidle(&pdev->dev);
 	goto out;
 }
@@ -7164,32 +7197,44 @@ static void rtl_hw_init_8168g(struct rtl8169_private *tp)
 	u32 data;
 
 	tp->ocp_base = OCP_STD_PHY_BASE;
+        printk("%s: %d", __func__, __LINE__);
 
 	RTL_W32(tp, MISC, RTL_R32(tp, MISC) | RXDV_GATED_EN);
+        printk("%s: %d", __func__, __LINE__);
 
 	if (!rtl_udelay_loop_wait_high(tp, &rtl_txcfg_empty_cond, 100, 42))
 		return;
 
+        printk("%s: %d", __func__, __LINE__);
 	if (!rtl_udelay_loop_wait_high(tp, &rtl_rxtx_empty_cond, 100, 42))
 		return;
 
+        printk("%s: %d", __func__, __LINE__);
 	RTL_W8(tp, ChipCmd, RTL_R8(tp, ChipCmd) & ~(CmdTxEnb | CmdRxEnb));
+        printk("%s: %d", __func__, __LINE__);
 	msleep(1);
+        printk("%s: %d", __func__, __LINE__);
 	RTL_W8(tp, MCU, RTL_R8(tp, MCU) & ~NOW_IS_OOB);
 
+        printk("%s: %d", __func__, __LINE__);
 	data = r8168_mac_ocp_read(tp, 0xe8de);
+        printk("%s: %d", __func__, __LINE__);
 	data &= ~(1 << 14);
 	r8168_mac_ocp_write(tp, 0xe8de, data);
+        printk("%s: %d", __func__, __LINE__);
 
 	if (!rtl_udelay_loop_wait_high(tp, &rtl_link_list_ready_cond, 100, 42))
 		return;
 
+        printk("%s: %d", __func__, __LINE__);
 	data = r8168_mac_ocp_read(tp, 0xe8de);
 	data |= (1 << 15);
 	r8168_mac_ocp_write(tp, 0xe8de, data);
 
+        printk("%s: %d", __func__, __LINE__);
 	if (!rtl_udelay_loop_wait_high(tp, &rtl_link_list_ready_cond, 100, 42))
 		return;
+        printk("%s: %d", __func__, __LINE__);
 }
 
 static void rtl_hw_init_8168ep(struct rtl8169_private *tp)
@@ -7269,7 +7314,7 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	tp = netdev_priv(dev);
 	tp->dev = dev;
 	tp->pci_dev = pdev;
-	tp->msg_enable = netif_msg_init(debug.msg_enable, R8169_MSG_DEFAULT);
+	tp->msg_enable = netif_msg_init(debug.msg_enable, 16);
 	tp->supports_gmii = cfg->has_gmii;
 
 	/* Get the *optional* external "ether_clk" used on some boards */
@@ -7300,14 +7345,18 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	/* enable device (incl. PCI PM wakeup and hotplug setup) */
 	rc = pcim_enable_device(pdev);
+        printk("%s: %d", __func__, __LINE__);
 	if (rc < 0) {
+        printk("%s: %d", __func__, __LINE__);
 		dev_err(&pdev->dev, "enable failure\n");
 		return rc;
 	}
 
+        printk("%s: %d", __func__, __LINE__);
 	if (pcim_set_mwi(pdev) < 0)
 		dev_info(&pdev->dev, "Mem-Wr-Inval unavailable\n");
 
+        printk("%s: %d", __func__, __LINE__);
 	/* use first MMIO region */
 	region = ffs(pci_select_bars(pdev, IORESOURCE_MEM)) - 1;
 	if (region < 0) {
@@ -7315,12 +7364,14 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 		return -ENODEV;
 	}
 
+        printk("%s: %d", __func__, __LINE__);
 	/* check for weird/broken PCI region reporting */
 	if (pci_resource_len(pdev, region) < R8169_REGS_SIZE) {
 		dev_err(&pdev->dev, "Invalid PCI region size(s), aborting\n");
 		return -ENODEV;
 	}
 
+        printk("%s: %d", __func__, __LINE__);
 	rc = pcim_iomap_regions(pdev, BIT(region), MODULENAME);
 	if (rc < 0) {
 		dev_err(&pdev->dev, "cannot remap MMIO, aborting\n");
@@ -7329,51 +7380,67 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	tp->mmio_addr = pcim_iomap_table(pdev)[region];
 
+        printk("%s: %d", __func__, __LINE__);
 	if (!pci_is_pcie(pdev))
 		dev_info(&pdev->dev, "not PCI Express\n");
 
 	/* Identify chip attached to board */
 	rtl8169_get_mac_version(tp, cfg->default_ver);
 
+        printk("%s: %d", __func__, __LINE__);
 	if (rtl_tbi_enabled(tp)) {
 		dev_err(&pdev->dev, "TBI fiber mode not supported\n");
 		return -ENODEV;
 	}
 
 	tp->cp_cmd = RTL_R16(tp, CPlusCmd);
+        printk("%s: %d", __func__, __LINE__);
 
 	if (sizeof(dma_addr_t) > 4 && (use_dac == 1 || (use_dac == -1 &&
 	    tp->mac_version >= RTL_GIGA_MAC_VER_18)) &&
 	    !dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64))) {
+        printk("%s: %d", __func__, __LINE__);
 
 		/* CPlusCmd Dual Access Cycle is only needed for non-PCIe */
 		if (!pci_is_pcie(pdev))
 			tp->cp_cmd |= PCIDAC;
 		dev->features |= NETIF_F_HIGHDMA;
+        printk("%s: %d", __func__, __LINE__);
 	} else {
+        printk("%s: %d", __func__, __LINE__);
 		rc = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
 		if (rc < 0) {
+        printk("%s: %d", __func__, __LINE__);
 			dev_err(&pdev->dev, "DMA configuration failed\n");
 			return rc;
 		}
 	}
 
 	rtl_init_rxcfg(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl8169_irq_mask_and_ack(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl_hw_initialize(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl_hw_reset(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	pci_set_master(pdev);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl_init_mdio_ops(tp);
+        printk("%s: %d", __func__, __LINE__);
 	rtl_init_jumbo_ops(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl8169_print_mac_version(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	chipset = tp->mac_version;
+        printk("%s: %d", __func__, __LINE__);
 
 	rc = rtl_alloc_irq(tp);
 	if (rc < 0) {
@@ -7386,6 +7453,7 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	mutex_init(&tp->wk.mutex);
 	u64_stats_init(&tp->rx_stats.syncp);
 	u64_stats_init(&tp->tx_stats.syncp);
+        printk("%s: %d", __func__, __LINE__);
 
 	/* Get MAC address */
 	switch (tp->mac_version) {
@@ -7406,19 +7474,24 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	dev->ethtool_ops = &rtl8169_ethtool_ops;
 
+        printk("%s: %d", __func__, __LINE__);
 	netif_napi_add(dev, &tp->napi, rtl8169_poll, NAPI_POLL_WEIGHT);
 
 	/* don't enable SG, IP_CSUM and TSO by default - it might not work
 	 * properly for all devices */
+        printk("%s: %d", __func__, __LINE__);
 	dev->features |= NETIF_F_RXCSUM |
 		NETIF_F_HW_VLAN_CTAG_TX | NETIF_F_HW_VLAN_CTAG_RX;
 
+        printk("%s: %d", __func__, __LINE__);
 	dev->hw_features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_TSO |
 		NETIF_F_RXCSUM | NETIF_F_HW_VLAN_CTAG_TX |
 		NETIF_F_HW_VLAN_CTAG_RX;
+        printk("%s: %d", __func__, __LINE__);
 	dev->vlan_features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_TSO |
 		NETIF_F_HIGHDMA;
 	dev->priv_flags |= IFF_LIVE_ADDR_CHANGE;
+        printk("%s: %d", __func__, __LINE__);
 
 	tp->cp_cmd |= RxChkSum | RxVlan;
 
@@ -7437,6 +7510,7 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 		tp->tso_csum = rtl8169_tso_csum_v1;
 	}
 
+        printk("%s: %d", __func__, __LINE__);
 	dev->hw_features |= NETIF_F_RXALL;
 	dev->hw_features |= NETIF_F_RXFCS;
 
@@ -7445,6 +7519,7 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	jumbo_max = rtl_jumbo_max(tp);
 	dev->max_mtu = jumbo_max;
 
+        printk("%s: %d", __func__, __LINE__);
 	tp->hw_start = cfg->hw_start;
 	tp->event_slow = cfg->event_slow;
 	tp->coalesce_info = cfg->coalesce_info;
@@ -7454,19 +7529,24 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	tp->counters = dmam_alloc_coherent (&pdev->dev, sizeof(*tp->counters),
 					    &tp->counters_phys_addr,
 					    GFP_KERNEL);
+        printk("%s: %d", __func__, __LINE__);
 	if (!tp->counters)
 		return -ENOMEM;
 
 	pci_set_drvdata(pdev, dev);
+        printk("%s: %d", __func__, __LINE__);
 
 	rc = r8169_mdio_register(tp);
+        printk("%s: %d", __func__, __LINE__);
 	if (rc)
 		return rc;
 
 	/* chip gets powered up in rtl_open() */
 	rtl_pll_power_down(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rc = register_netdev(dev);
+        printk("%s: %d", __func__, __LINE__);
 	if (rc)
 		goto err_mdio_unregister;
 
@@ -7481,15 +7561,22 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 			   jumbo_max, tp->mac_version <= RTL_GIGA_MAC_VER_06 ?
 			   "ok" : "ko");
 
-	if (r8168_check_dash(tp))
+        printk("%s: %d", __func__, __LINE__);
+	if (r8168_check_dash(tp)) {
+        printk("%s: %d", __func__, __LINE__);
 		rtl8168_driver_start(tp);
+        }
 
-	if (pci_dev_run_wake(pdev))
+        printk("%s: %d", __func__, __LINE__);
+	if (pci_dev_run_wake(pdev)) {
+        printk("%s: %d", __func__, __LINE__);
 		pm_runtime_put_sync(&pdev->dev);
+        }
 
 	return 0;
 
 err_mdio_unregister:
+        printk("%s: %d", __func__, __LINE__);
 	mdiobus_unregister(tp->mii_bus);
 	return rc;
 }

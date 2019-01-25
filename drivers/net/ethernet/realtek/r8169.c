@@ -1758,20 +1758,28 @@ static bool rtl8169_init_counter_offsets(struct rtl8169_private *tp)
 	 * set at open time by rtl_hw_start.
 	 */
 
-	if (tp->tc_offset.inited)
+        printk("%s: %d", __func__, __LINE__);
+	if (tp->tc_offset.inited) {
+                printk("%s: %d", __func__, __LINE__);
 		return true;
+        }
 
 	/* If both, reset and update fail, propagate to caller. */
-	if (rtl8169_reset_counters(tp))
+	if (rtl8169_reset_counters(tp)) {
+                printk("%s: %d", __func__, __LINE__);
 		ret = true;
+        }
 
-	if (rtl8169_update_counters(tp))
+	if (rtl8169_update_counters(tp)) {
+                printk("%s: %d", __func__, __LINE__);
 		ret = true;
+        }
 
 	tp->tc_offset.tx_errors = counters->tx_errors;
 	tp->tc_offset.tx_multi_collision = counters->tx_multi_collision;
 	tp->tc_offset.tx_aborted = counters->tx_aborted;
 	tp->tc_offset.inited = true;
+        printk("%s: %d", __func__, __LINE__);
 
 	return ret;
 }
@@ -4278,7 +4286,7 @@ static void rtl_init_rxcfg(struct rtl8169_private *tp)
 		RTL_W32(tp, RxConfig, RX128_INT_EN | RX_MULTI_EN | RX_DMA_BURST);
 		break;
 	case RTL_GIGA_MAC_VER_40 ... RTL_GIGA_MAC_VER_51:
-		RTL_W32(tp, RxConfig, RX128_INT_EN | RX_MULTI_EN | RX_DMA_BURST | RX_EARLY_OFF);
+		RTL_W32(tp, RxConfig, 0xE70F);
 		break;
 	default:
 		RTL_W32(tp, RxConfig, RX128_INT_EN | RX_DMA_BURST);
@@ -4533,13 +4541,13 @@ static void rtl_set_tx_config_registers(struct rtl8169_private *tp)
 	    tp->mac_version != RTL_GIGA_MAC_VER_39)
 		val |= TXCFG_AUTO_FIFO;
 
-	RTL_W32(tp, TxConfig, val);
+	RTL_W32(tp, TxConfig, 0x03000700);
 }
 
 static void rtl_set_rx_max_size(struct rtl8169_private *tp)
 {
 	/* Low hurts. Let's disable the filtering. */
-	RTL_W16(tp, RxMaxSize, R8169_RX_BUF_SIZE + 1);
+	RTL_W16(tp, RxMaxSize, 0x1FFF);
 }
 
 static void rtl_set_rx_tx_desc_registers(struct rtl8169_private *tp)
@@ -4553,6 +4561,11 @@ static void rtl_set_rx_tx_desc_registers(struct rtl8169_private *tp)
 	RTL_W32(tp, TxDescStartAddrLow, ((u64) tp->TxPhyAddr) & DMA_BIT_MASK(32));
 	RTL_W32(tp, RxDescAddrHigh, ((u64) tp->RxPhyAddr) >> 32);
 	RTL_W32(tp, RxDescAddrLow, ((u64) tp->RxPhyAddr) & DMA_BIT_MASK(32));
+
+        printk("%s: TxDescStartAddrLow: %x", __func__, (((u64) tp->TxPhyAddr) & DMA_BIT_MASK(32)));
+        printk("%s: TxDescStartAddrHigh: %x", __func__, ((u64) tp->TxPhyAddr) >> 32);
+        printk("%s: RxDescStartAddrLow: %x", __func__, (((u64) tp->RxPhyAddr) & DMA_BIT_MASK(32)));
+        printk("%s: RxDescStartAddrHigh: %x", __func__, ((u64) tp->RxPhyAddr) >> 32);
 }
 
 static void rtl8169_set_magic_reg(struct rtl8169_private *tp, unsigned mac_version)
@@ -4626,37 +4639,54 @@ static void rtl_set_rx_mode(struct net_device *dev)
 
 static void rtl_hw_start(struct  rtl8169_private *tp)
 {
+        printk("%s: %d", __func__, __LINE__);
 	RTL_W8(tp, Cfg9346, Cfg9346_Unlock);
 
+        printk("%s: %d", __func__, __LINE__);
 	tp->hw_start(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl_set_rx_max_size(tp);
+        printk("%s: %d", __func__, __LINE__);
 	rtl_set_rx_tx_desc_registers(tp);
-	RTL_W8(tp, Cfg9346, Cfg9346_Lock);
+        printk("%s: %d", __func__, __LINE__);
+        printk("%s: %d", __func__, __LINE__);
 
 	/* Initially a 10 us delay. Turned it into a PCI commit. - FR */
 	RTL_R8(tp, IntrMask);
-	RTL_W8(tp, ChipCmd, CmdTxEnb | CmdRxEnb);
+        printk("%s: %d", __func__, __LINE__);
+        printk("%s: %d", __func__, __LINE__);
 	rtl_init_rxcfg(tp);
+        printk("%s: %d", __func__, __LINE__);
 	rtl_set_tx_config_registers(tp);
+        printk("%s: %d", __func__, __LINE__);
 
 	rtl_set_rx_mode(tp->dev);
+        printk("%s: %d", __func__, __LINE__);
 	/* no early-rx interrupts */
 	RTL_W16(tp, MultiIntr, RTL_R16(tp, MultiIntr) & 0xf000);
+        printk("%s: %d", __func__, __LINE__);
+	RTL_W8(tp, ChipCmd, CmdTxEnb | CmdRxEnb);
+	RTL_W8(tp, Cfg9346, Cfg9346_Lock);
+	RTL_R8(tp, IntrMask);
 	rtl_irq_enable_all(tp);
+        printk("%s: %d", __func__, __LINE__);
 }
 
 static void rtl_hw_start_8169(struct rtl8169_private *tp)
 {
+        printk("%s: %d", __func__, __LINE__);
 	if (tp->mac_version == RTL_GIGA_MAC_VER_05)
 		pci_write_config_byte(tp->pci_dev, PCI_CACHE_LINE_SIZE, 0x08);
 
-	RTL_W8(tp, EarlyTxThres, NoEarlyTx);
+	RTL_W8(tp, EarlyTxThres, 0x3B);
 
+        printk("%s: %d", __func__, __LINE__);
 	tp->cp_cmd |= PCIMulRW;
 
 	if (tp->mac_version == RTL_GIGA_MAC_VER_02 ||
 	    tp->mac_version == RTL_GIGA_MAC_VER_03) {
+        printk("%s: %d", __func__, __LINE__);
 		netif_dbg(tp, drv, tp->dev,
 			  "Set MAC Reg C+CR Offset 0xe0. Bit 3 and Bit 14 MUST be 1\n");
 		tp->cp_cmd |= (1 << 14);
@@ -4664,6 +4694,7 @@ static void rtl_hw_start_8169(struct rtl8169_private *tp)
 
 	RTL_W16(tp, CPlusCmd, tp->cp_cmd);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl8169_set_magic_reg(tp, tp->mac_version);
 
 	/*
@@ -4673,6 +4704,7 @@ static void rtl_hw_start_8169(struct rtl8169_private *tp)
 	RTL_W16(tp, IntrMitigate, 0x0000);
 
 	RTL_W32(tp, RxMissed, 0);
+        printk("%s: %d", __func__, __LINE__);
 }
 
 DECLARE_RTL_COND(rtl_csiar_cond)
@@ -4688,6 +4720,7 @@ static void rtl_csi_write(struct rtl8169_private *tp, int addr, int value)
 	RTL_W32(tp, CSIAR, CSIAR_WRITE_CMD | (addr & CSIAR_ADDR_MASK) |
 		CSIAR_BYTE_ENABLE | func << 16);
 
+        printk("%s: %d", __func__, __LINE__);
 	rtl_udelay_loop_wait_low(tp, &rtl_csiar_cond, 10, 100);
 }
 
@@ -4698,6 +4731,7 @@ static u32 rtl_csi_read(struct rtl8169_private *tp, int addr)
 	RTL_W32(tp, CSIAR, (addr & CSIAR_ADDR_MASK) | func << 16 |
 		CSIAR_BYTE_ENABLE);
 
+        printk("%s: %d", __func__, __LINE__);
 	return rtl_udelay_loop_wait_high(tp, &rtl_csiar_cond, 10, 100) ?
 		RTL_R32(tp, CSIDR) : ~0;
 }
@@ -6506,7 +6540,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 out:
         printk("%s: %d", __func__, __LINE__);
 	rtl_ack_events(tp, status);
-        printk("%s: %d, status: %d", __func__, __LINE__, status);
+        printk("%s: %x, status: %d", __func__, __LINE__, status);
 
 	return IRQ_HANDLED;
 }

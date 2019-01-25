@@ -1431,10 +1431,14 @@ static int pci_cfg_space_size_ext(struct pci_dev *dev)
 	u32 status;
 	int pos = PCI_CFG_SPACE_SIZE;
 
-	if (pci_read_config_dword(dev, pos, &status) != PCIBIOS_SUCCESSFUL)
+	if (pci_read_config_dword(dev, pos, &status) != PCIBIOS_SUCCESSFUL) {
+                printk("%s: %d", __func__, __LINE__);
 		return PCI_CFG_SPACE_SIZE;
-	if (status == 0xffffffff || pci_ext_cfg_is_aliased(dev))
+        }
+	if (status == 0xffffffff || pci_ext_cfg_is_aliased(dev)) {
+                printk("%s: %d", __func__, __LINE__);
 		return PCI_CFG_SPACE_SIZE;
+        }
 
 	return PCI_CFG_SPACE_EXP_SIZE;
 }
@@ -1462,24 +1466,39 @@ int pci_cfg_space_size(struct pci_dev *dev)
 		return dev->physfn->sriov->cfg_size;
 #endif
 
-	if (dev->bus->bus_flags & PCI_BUS_FLAGS_NO_EXTCFG)
+	if (dev->bus->bus_flags & PCI_BUS_FLAGS_NO_EXTCFG) {
+                printk("%s: %d", __func__, __LINE__);
 		return PCI_CFG_SPACE_SIZE;
+        }
 
 	class = dev->class >> 8;
-	if (class == PCI_CLASS_BRIDGE_HOST)
+	if (class == PCI_CLASS_BRIDGE_HOST) {
+                printk("%s: %d", __func__, __LINE__);
 		return pci_cfg_space_size_ext(dev);
+        }
 
-	if (pci_is_pcie(dev))
+	if (pci_is_pcie(dev)) {
+                printk("%s: %d", __func__, __LINE__);
 		return pci_cfg_space_size_ext(dev);
+        }
 
 	pos = pci_find_capability(dev, PCI_CAP_ID_PCIX);
-	if (!pos)
+        printk("%s: %d", __func__, __LINE__);
+
+	if (!pos) {
+                printk("%s: %d", __func__, __LINE__);
 		return PCI_CFG_SPACE_SIZE;
+        }
 
 	pci_read_config_dword(dev, pos + PCI_X_STATUS, &status);
-	if (status & (PCI_X_STATUS_266MHZ | PCI_X_STATUS_533MHZ))
-		return pci_cfg_space_size_ext(dev);
+        printk("%s: %d", __func__, __LINE__);
 
+	if (status & (PCI_X_STATUS_266MHZ | PCI_X_STATUS_533MHZ)) {
+                printk("%s: %d", __func__, __LINE__);
+		return pci_cfg_space_size_ext(dev);
+        }
+
+        printk("%s: %d", __func__, __LINE__);
 	return PCI_CFG_SPACE_SIZE;
 }
 

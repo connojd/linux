@@ -5097,7 +5097,7 @@ static void rtl_hw_start_8411(struct rtl8169_private *tp)
 
 static void rtl_hw_start_8168g(struct rtl8169_private *tp)
 {
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 
 	rtl_eri_write(tp, 0xc8, ERIAR_MASK_0101, 0x080002, ERIAR_EXGMAC);
 	rtl_eri_write(tp, 0xcc, ERIAR_MASK_0001, 0x38, ERIAR_EXGMAC);
@@ -5153,19 +5153,19 @@ static void rtl_hw_start_8168g_2(struct rtl8169_private *tp)
 		{ 0x1e, 0xffff,	0x20eb }
 	};
 
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 
 	rtl_hw_start_8168g(tp);
 
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 
 	/* disable aspm and clock request before access ephy */
 	RTL_W8(tp, Config2, RTL_R8(tp, Config2) & ~ClkReqEn);
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 	RTL_W8(tp, Config5, RTL_R8(tp, Config5) & ~ASPM_en);
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 	rtl_ephy_init(tp, e_info_8168g_2, ARRAY_SIZE(e_info_8168g_2));
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 }
 
 static void rtl_hw_start_8411_2(struct rtl8169_private *tp)
@@ -5767,10 +5767,12 @@ static struct sk_buff *rtl8169_alloc_rx_data(struct rtl8169_private *tp,
 	}
 
 	desc->addr = cpu_to_le64(mapping);
+        //printk("%s: kmalloc data (0x%16llx) dma mapping (0x%16llx) desc->addr (0x%16llx)", __func__, data, mapping, desc->addr);
 	rtl8169_mark_to_asic(desc);
 	return data;
 
 err_out:
+        //printk("%s: err_out!!!!!!", __func__);
 	kfree(data);
 	return NULL;
 }
@@ -5795,6 +5797,8 @@ static inline void rtl8169_mark_as_last_descriptor(struct RxDesc *desc)
 static int rtl8169_rx_fill(struct rtl8169_private *tp)
 {
 	unsigned int i;
+
+        //printk("%s: NUM_RX_DESC: %d\n", __func__, NUM_RX_DESC);
 
 	for (i = 0; i < NUM_RX_DESC; i++) {
 		void *data;
@@ -5894,6 +5898,7 @@ static void rtl8169_tx_timeout(struct net_device *dev)
 {
 	struct rtl8169_private *tp = netdev_priv(dev);
 
+        //printk("%s", __func__);
 	rtl_schedule_task(tp, RTL_FLAG_TASK_RESET_PENDING);
 }
 
@@ -5906,6 +5911,7 @@ static int rtl8169_xmit_frags(struct rtl8169_private *tp, struct sk_buff *skb,
 	struct device *d = tp_to_dev(tp);
 
 	entry = tp->cur_tx;
+        //printk("%s", __func__);
 	for (cur_frag = 0; cur_frag < info->nr_frags; cur_frag++) {
 		const skb_frag_t *frag = info->frags + cur_frag;
 		dma_addr_t mapping;
@@ -6129,6 +6135,7 @@ static netdev_tx_t rtl8169_start_xmit(struct sk_buff *skb,
 	u32 opts[2];
 	int frags;
 
+        //printk("%s", __func__);
 	if (unlikely(!TX_FRAGS_READY_FOR(tp, skb_shinfo(skb)->nr_frags))) {
 		netif_err(tp, drv, dev, "BUG! Tx Ring full when queue awake!\n");
 		goto err_stop_0;
@@ -6273,6 +6280,7 @@ static void rtl_tx(struct net_device *dev, struct rtl8169_private *tp)
 	dirty_tx = tp->dirty_tx;
 	smp_rmb();
 	tx_left = tp->cur_tx - dirty_tx;
+        //printk("%s", __func__);
 
 	while (tx_left > 0) {
 		unsigned int entry = dirty_tx % NUM_TX_DESC;
@@ -6358,6 +6366,7 @@ static struct sk_buff *rtl8169_try_rx_copy(void *data,
 	struct device *d = tp_to_dev(tp);
 
 	data = rtl8169_align(data);
+        //printk("%s", __func__);
 	dma_sync_single_for_cpu(d, addr, pkt_size, DMA_FROM_DEVICE);
 	prefetch(data);
 	skb = napi_alloc_skb(&tp->napi, pkt_size);
@@ -6374,6 +6383,7 @@ static int rtl_rx(struct net_device *dev, struct rtl8169_private *tp, u32 budget
 	unsigned int count;
 
 	cur_rx = tp->cur_rx;
+        //printk("%s", __func__);
 
 	for (rx_left = min(budget, NUM_RX_DESC); rx_left > 0; rx_left--, cur_rx++) {
 		unsigned int entry = cur_rx % NUM_RX_DESC;
@@ -6470,7 +6480,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 	struct rtl8169_private *tp = dev_instance;
 	u16 status = rtl_get_events(tp);
 
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 
 	if (status == 0xffff || !(status & (RTL_EVENT_NAPI | tp->event_slow))) {
                 printk("%s: %d", __func__, __LINE__);
@@ -6497,14 +6507,14 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 	}
 
 	if (status & RTL_EVENT_NAPI) {
-                printk("%s: %d", __func__, __LINE__);
+                //printk("%s: %d", __func__, __LINE__);
 		rtl_irq_disable(tp);
 		napi_schedule_irqoff(&tp->napi);
 	}
 out:
-        printk("%s: %d", __func__, __LINE__);
+        //printk("%s: %d", __func__, __LINE__);
 	rtl_ack_events(tp, status);
-        printk("%s: %d", __func__, __LINE__);
+//        printk("%s status: 0x%x", __func__, status);
 
 	return IRQ_HANDLED;
 }
@@ -6522,6 +6532,7 @@ static void rtl_task(struct work_struct *work)
 	struct net_device *dev = tp->dev;
 	int i;
 
+        //printk("%s", __func__);
 	rtl_lock_work(tp);
 
 	if (!netif_running(dev) ||
@@ -6546,6 +6557,7 @@ static int rtl8169_poll(struct napi_struct *napi, int budget)
 	struct net_device *dev = tp->dev;
 	int work_done;
 
+        //printk("%s", __func__);
 	work_done = rtl_rx(dev, tp, (u32) budget);
 
 	rtl_tx(dev, tp);
@@ -6563,6 +6575,7 @@ static int rtl8169_poll(struct napi_struct *napi, int budget)
 static void rtl8169_rx_missed(struct net_device *dev)
 {
 	struct rtl8169_private *tp = netdev_priv(dev);
+        //printk("%s", __func__);
 
 	if (tp->mac_version > RTL_GIGA_MAC_VER_06)
 		return;
@@ -6689,7 +6702,7 @@ static int rtl_open(struct net_device *dev)
 	int retval = -ENOMEM;
 
 	pm_runtime_get_sync(&pdev->dev);
-        printk("%s %d", __func__, __LINE__);
+        printk("r8169: device opened");
 
 	/*
 	 * Rx and Tx descriptors needs 256 bytes alignment.
@@ -6702,26 +6715,26 @@ static int rtl_open(struct net_device *dev)
 
 	tp->RxDescArray = dma_alloc_coherent(&pdev->dev, R8169_RX_RING_BYTES,
 					     &tp->RxPhyAddr, GFP_KERNEL);
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	if (!tp->RxDescArray)
 		goto err_free_tx_0;
 
 	retval = rtl8169_init_ring(tp);
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	if (retval < 0)
 		goto err_free_rx_1;
 
 	INIT_WORK(&tp->wk.work, rtl_task);
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 
 	smp_mb();
 
 	rtl_request_firmware(tp);
 
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	retval = pci_request_irq(pdev, 0, rtl8169_interrupt, NULL, tp,
 				 dev->name);
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	if (retval < 0)
 		goto err_release_fw_2;
 
@@ -6731,7 +6744,7 @@ static int rtl_open(struct net_device *dev)
 
 	rtl_lock_work(tp);
 
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	set_bit(RTL_FLAG_TASK_ENABLED, tp->wk.flags);
 
 	napi_enable(&tp->napi);
@@ -6745,14 +6758,14 @@ static int rtl_open(struct net_device *dev)
 	if (!rtl8169_init_counter_offsets(tp))
 		netif_warn(tp, hw, dev, "counter reset/update failed\n");
 
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 	phy_start(dev->phydev);
 	netif_start_queue(dev);
 
 	rtl_unlock_work(tp);
 
 	pm_runtime_put_sync(&pdev->dev);
-        printk("%s %d", __func__, __LINE__);
+        //printk("%s %d", __func__, __LINE__);
 out:
 	return retval;
 

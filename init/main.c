@@ -1009,7 +1009,6 @@ void __init load_default_modules(void)
 
 static int run_init_process(const char *init_filename)
 {
-        init_filename = "/usr/bin/ndvm-init.sh";
 	argv_init[0] = init_filename;
 	printk("Run %s as init process\n", init_filename);
 	return do_execve(getname_kernel(init_filename),

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# This Kconfig describes Boxy options
+#
+
+config BOXY
+	bool "Boxy guest support"
+	depends on PARAVIRT && X86_64
+	---help---
+	  This option allows you to run Linux as a Boxy guest virtual machine.
+	  Boxy requires a very specific kernel config so in general, this
+	  option should not be manually selected and instead is enabled by the
+	  Boxy build system with the proper config in place.

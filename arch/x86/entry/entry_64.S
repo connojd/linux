@@ -1117,6 +1117,10 @@ apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \
 	xen_hvm_callback_vector xen_evtchn_do_upcall
 #endif
 
+#ifdef CONFIG_BOXY
+apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \
+	boxy_virq_handler_sym boxy_virq_handler
+#endif
 
 #if IS_ENABLED(CONFIG_HYPERV)
 apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \

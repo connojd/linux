@@ -6483,7 +6483,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
         //printk("%s: %d", __func__, __LINE__);
 
 	if (status == 0xffff || !(status & (RTL_EVENT_NAPI | tp->event_slow))) {
-                printk("%s: %d", __func__, __LINE__);
+                //printk("%s: %d", __func__, __LINE__);
 		return IRQ_NONE;
         }
 
@@ -6514,7 +6514,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 out:
         //printk("%s: %d", __func__, __LINE__);
 	rtl_ack_events(tp, status);
-//        printk("%s status: 0x%x", __func__, status);
+        //printk("%s status: 0x%x", __func__, status);
 
 	return IRQ_HANDLED;
 }

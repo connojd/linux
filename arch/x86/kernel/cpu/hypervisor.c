@@ -33,6 +33,10 @@ extern const struct hypervisor_x86 x86_hyper_xen_hvm;
 extern const struct hypervisor_x86 x86_hyper_kvm;
 extern const struct hypervisor_x86 x86_hyper_jailhouse;
 
+#ifdef CONFIG_BOXY
+extern const struct hypervisor_x86 x86_hyper_boxy;
+#endif
+
 static const __initconst struct hypervisor_x86 * const hypervisors[] =
 {
 #ifdef CONFIG_XEN_PV
@@ -48,6 +52,9 @@ static const __initconst struct hypervisor_x86 * const hypervisors[] =
 #endif
 #ifdef CONFIG_JAILHOUSE_GUEST
 	&x86_hyper_jailhouse,
+#endif
+#ifdef CONFIG_BOXY
+	&x86_hyper_boxy,
 #endif
 };
 

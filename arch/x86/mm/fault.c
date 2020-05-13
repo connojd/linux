@@ -418,7 +418,7 @@ NOKPROBE_SYMBOL(vmalloc_fault);
 
 #ifdef CONFIG_CPU_SUP_AMD
 static const char errata93_warning[] =
-KERN_ERR 
+KERN_ERR
 "******* Your BIOS seems to not contain a fix for K8 errata #93\n"
 "******* Working around it, but it may cause SEGVs or burn power.\n"
 "******* Please consider a BIOS update.\n"
@@ -767,6 +767,14 @@ show_signal_msg(struct pt_regs *regs, unsigned long error_code,
 	if (!printk_ratelimit())
 		return;
 
+        asm volatile(
+            "movq $0xBF03000000000105, %%rax \t\n"
+            "vmcall \t\n"
+            :
+            :
+            : "rax", "memory"
+        );
+
 	printk("%s%s[%d]: segfault at %lx ip %px sp %px error %lx",
 		loglvl, tsk->comm, task_pid_nr(tsk), address,
 		(void *)regs->ip, (void *)regs->sp, error_code);
@@ -776,6 +784,8 @@ show_signal_msg(struct pt_regs *regs, unsigned long error_code,
 	printk(KERN_CONT "\n");
 
 	show_opcodes(regs, loglvl);
+        printk("CPU has PGE: %d\n", boot_cpu_has(X86_FEATURE_PGE) ? 1 : 0);
+        die("FATAL SEGFAULT", regs, error_code);
 }
 
 /*

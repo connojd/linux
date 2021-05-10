@@ -44,7 +44,7 @@ int xen_dbgp_external_startup(struct usb_hcd *hcd)
 	return xen_dbgp_op(hcd, PHYSDEVOP_DBGP_RESET_DONE);
 }
 
-#ifndef CONFIG_EARLY_PRINTK_DBGP
+#if defined(CONFIG_XEN_DOM0) || !defined(CONFIG_EARLY_PRINTK_DBGP)
 #include <linux/export.h>
 EXPORT_SYMBOL_GPL(xen_dbgp_reset_prep);
 EXPORT_SYMBOL_GPL(xen_dbgp_external_startup);

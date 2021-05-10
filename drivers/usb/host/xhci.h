@@ -1920,6 +1920,7 @@ struct xhci_hcd {
 	struct list_head	regset_list;
 
 	void			*dbc;
+	int			external_dbc;
 	/* platform-specific data -- must come last */
 	unsigned long		priv[] __aligned(sizeof(s64));
 };

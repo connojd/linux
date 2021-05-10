@@ -37,6 +37,47 @@ static unsigned long long quirks;
 module_param(quirks, ullong, S_IRUGO);
 MODULE_PARM_DESC(quirks, "Bit flags for quirks to be enabled as default");
 
+#ifdef CONFIG_XEN_DOM0
+void xhci_dbc_external_reset_prep(struct xhci_hcd *xhci)
+{
+	struct dbc_regs __iomem *regs;
+	void __iomem		*base;
+	int			dbc_cap;
+
+	if (!xen_initial_domain())
+		return;
+
+	base = &xhci->cap_regs->hc_capbase;
+	dbc_cap = xhci_find_next_ext_cap(base, 0, XHCI_EXT_CAPS_DEBUG);
+
+	if (!dbc_cap)
+		return;
+
+	xhci->external_dbc = 0;
+	regs = base + dbc_cap;
+
+	if (readl(&regs->control) & DBC_CTRL_DBC_ENABLE) {
+		if (xen_dbgp_reset_prep(xhci_to_hcd(xhci)))
+			xhci_dbg_trace(xhci, trace_xhci_dbg_init,
+					"// Failed to reset external DBC");
+		else {
+			xhci->external_dbc = 1;
+			xhci_dbg_trace(xhci, trace_xhci_dbg_init,
+					"// Completed reset of external DBC");
+		}
+	}
+}
+
+void xhci_dbc_external_reset_done(struct xhci_hcd *xhci)
+{
+	if (!xen_initial_domain() || !xhci->external_dbc)
+		return;
+
+	if (xen_dbgp_external_startup(xhci_to_hcd(xhci)))
+		xhci->external_dbc = 0;
+}
+#endif
+
 static bool td_on_ring(struct xhci_td *td, struct xhci_ring *ring)
 {
 	struct xhci_segment *seg = ring->first_seg;
@@ -180,6 +221,8 @@ int xhci_reset(struct xhci_hcd *xhci)
 		return 0;
 	}
 
+	xhci_dbc_external_reset_prep(xhci);
+
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init, "// Reset the HC");
 	command = readl(&xhci->op_regs->command);
 	command |= CMD_RESET;
@@ -211,6 +254,8 @@ int xhci_reset(struct xhci_hcd *xhci)
 	 */
 	ret = xhci_handshake(&xhci->op_regs->status,
 			STS_CNR, 0, 10 * 1000 * 1000);
+	if (!ret)
+		xhci_dbc_external_reset_done(xhci);
 
 	xhci->usb2_rhub.bus_state.port_c_suspend = 0;
 	xhci->usb2_rhub.bus_state.suspended_ports = 0;
@@ -991,6 +1036,7 @@ int xhci_suspend(struct xhci_hcd *xhci, bool do_wakeup)
 		return 0;
 
 	xhci_dbc_suspend(xhci);
+	xhci_dbc_external_reset_prep(xhci);
 
 	/* Don't poll the roothubs on bus suspend. */
 	xhci_dbg(xhci, "%s: stopping port polling.\n", __func__);
@@ -1225,6 +1271,7 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 	spin_unlock_irq(&xhci->lock);
 
 	xhci_dbc_resume(xhci);
+	xhci_dbc_external_reset_done(xhci);
 
  done:
 	if (retval == 0) {

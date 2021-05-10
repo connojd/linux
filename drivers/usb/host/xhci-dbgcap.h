@@ -227,4 +227,23 @@ static inline int xhci_dbc_resume(struct xhci_hcd *xhci)
 	return 0;
 }
 #endif /* CONFIG_USB_XHCI_DBGCAP */
+
+#ifdef CONFIG_XEN_DOM0
+#include <xen/xen.h>
+
+int xen_dbgp_reset_prep(struct usb_hcd *hcd);
+int xen_dbgp_external_startup(struct usb_hcd *hcd);
+
+void xhci_dbc_external_reset_prep(struct xhci_hcd *xhci);
+void xhci_dbc_external_reset_done(struct xhci_hcd *xhci);
+#else
+static inline void xhci_dbc_external_reset_prep(struct xhci_hcd *xhci)
+{
+}
+
+static inline void xhci_dbc_external_reset_done(struct xhci_hcd *xhci)
+{
+}
+#endif /* CONFIG_XEN_DOM0 */
+
 #endif /* __LINUX_XHCI_DBGCAP_H */

@@ -642,6 +642,16 @@ int __init early_xdbc_parse_parameter(char *s)
 	}
 	xdbc.xdbc_reg = (struct xdbc_regs __iomem *)(xdbc.xhci_base + offset);
 
+	if (readl(&xdbc.xdbc_reg->control) & CTRL_DBC_ENABLE) {
+		pr_notice("xhci debug capability already in use\n");
+		early_iounmap(xdbc.xhci_base, xdbc.xhci_length);
+		xdbc.xdbc_reg = NULL;
+		xdbc.xhci_base = NULL;
+		xdbc.xhci_length = 0;
+
+		return -ENODEV;
+	}
+
 	return 0;
 }
 

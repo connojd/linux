@@ -56,28 +56,32 @@ extern int xen_dbgp_external_startup(struct usb_hcd *);
 #else
 static inline int xen_dbgp_reset_prep(struct usb_hcd *hcd)
 {
-	return 1; /* Shouldn't this be 0? */
+	return -EPERM;
 }
 
 static inline int xen_dbgp_external_startup(struct usb_hcd *hcd)
 {
-	return -1;
+	return -EPERM;
 }
 #endif
 
 #ifdef CONFIG_EARLY_PRINTK_DBGP
-/* Call backs from ehci host driver to ehci debug driver */
+/*
+ * Call backs from ehci host driver to ehci debug driver.
+ * Returns 0 if the debug port should stopped being used,
+ * nonzero otherwise.
+ */
 extern int dbgp_external_startup(struct usb_hcd *);
 extern int dbgp_reset_prep(struct usb_hcd *);
 #else
 static inline int dbgp_reset_prep(struct usb_hcd *hcd)
 {
-	return xen_dbgp_reset_prep(hcd);
+	return !xen_dbgp_reset_prep(hcd);
 }
 
 static inline int dbgp_external_startup(struct usb_hcd *hcd)
 {
-	return xen_dbgp_external_startup(hcd);
+	return !xen_dbgp_external_startup(hcd);
 }
 #endif
 

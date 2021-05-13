@@ -15,7 +15,7 @@ static int xen_dbgp_op(struct usb_hcd *hcd, int op)
 	struct physdev_dbgp_op dbgp;
 
 	if (!xen_initial_domain())
-		return 0;
+		return -EPERM;
 
 	dbgp.op = op;
 

@@ -970,8 +970,8 @@ int dbgp_reset_prep(struct usb_hcd *hcd)
 	int ret = xen_dbgp_reset_prep(hcd);
 	u32 ctrl;
 
-	if (ret)
-		return ret;
+	if (!ret)
+		return 1;
 
 	dbgp_not_safe = 1;
 	if (!ehci_debug)
@@ -995,7 +995,10 @@ EXPORT_SYMBOL_GPL(dbgp_reset_prep);
 
 int dbgp_external_startup(struct usb_hcd *hcd)
 {
-	return xen_dbgp_external_startup(hcd) ?: _dbgp_external_startup();
+	if (!xen_dbgp_external_startup(hcd))
+		return 1;
+
+	return !_dbgp_external_startup();
 }
 EXPORT_SYMBOL_GPL(dbgp_external_startup);
 #endif /* USB */
